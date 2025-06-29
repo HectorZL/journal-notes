@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.mood_notes"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973" // Updated for dynamic_color plugin compatibility
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
