@@ -8,11 +8,13 @@ import '../../state/providers/providers.dart';
 class NoteEditScreen extends ConsumerStatefulWidget {
   final int moodIndex;
   final Color moodColor;
+  final Note? noteToEdit;
   
   const NoteEditScreen({
     Key? key,
     required this.moodIndex,
     required this.moodColor,
+    this.noteToEdit,
   }) : super(key: key);
 
   @override
@@ -25,9 +27,25 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
   bool _isSubmitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    // If editing an existing note, pre-fill the content
+    if (widget.noteToEdit != null) {
+      _controller.text = widget.noteToEdit!.content;
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+  
+  // Helper method to validate form and save note
+  Future<void> _validateAndSave() async {
+    if (_formKey.currentState!.validate()) {
+      await _saveNote();
+    }
   }
 
   // Helper method to show exit confirmation dialog
@@ -66,35 +84,66 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
     });
 
     try {
-      final note = Note(
-        id: const Uuid().v4(),
+      final isEditing = widget.noteToEdit != null;
+      final now = DateTime.now();
+      
+      // Create the updated note
+      final updatedNote = Note(
+        id: isEditing ? widget.noteToEdit!.id : const Uuid().v4(),
         content: _controller.text.trim(),
-        date: DateTime.now(),
+        date: isEditing ? widget.noteToEdit!.date : now,
         moodIndex: widget.moodIndex,
         color: widget.moodColor,
       );
 
-      // Add the note to the state
-      ref.read(notesProvider.notifier).addNote(note);
+      // Get the current notes
+      final notesNotifier = ref.read(notesProvider.notifier);
+      
+      // If editing, remove the old note first
+      if (isEditing) {
+        await notesNotifier.removeNote(widget.noteToEdit!);
+      }
+      
+      // Add the updated/new note
+      await notesNotifier.addNote(updatedNote);
       
       // Show success feedback
+      if (!mounted) return;
+      
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      scaffoldMessenger.clearSnackBars();
+      
+      // Show success message
+      final snackBar = SnackBar(
+        content: Text(isEditing ? 'Nota actualizada' : 'Nota guardada correctamente'),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      );
+      
+      // Navigate back first, then show the snackbar
+      final fromCalendar = ModalRoute.of(context)?.settings.arguments == 'fromCalendar';
+      
+      if (fromCalendar) {
+        // If from calendar, pop twice (edit screen and details modal)
+        Navigator.of(context)
+          ..pop() // Close edit screen
+          ..pop(); // Close details modal
+      } else {
+        // If from home, pop once (edit screen) with result
+        Navigator.of(context).pop(true);
+      }
+      
+      // Show snackbar after navigation is complete
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Nota guardada correctamente'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-        
-        // Return to previous screen after a short delay
-        await Future.delayed(const Duration(milliseconds: 1500));
-        if (mounted) {
-          Navigator.of(context).pop(true);
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (ScaffoldMessenger.maybeOf(context) != null) {
+            scaffoldMessenger.showSnackBar(snackBar);
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -143,7 +192,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Nueva nota'),
+          title: Text(widget.noteToEdit == null ? 'Nueva nota' : 'Editar nota'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () async {
@@ -171,124 +220,131 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
               ),
           ],
         ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Mood indicator
-              Card(
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: colorScheme.outlineVariant,
-                    width: 1,
+        body: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Mood indicator
+                Card(
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: colorScheme.outlineVariant,
+                      width: 1,
+                    ),
                   ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.mood_rounded,
-                            color: colorScheme.primary,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Tu estado de ánimo',
-                            style: textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: widget.moodColor.withAlpha(20),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: widget.moodColor.withAlpha(150),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: widget.moodColor.withAlpha(50),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Text(
-                              moodEmojis[widget.moodIndex],
-                              style: const TextStyle(fontSize: 28),
+                            Icon(
+                              Icons.mood_rounded,
+                              color: colorScheme.primary,
+                              size: 24,
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 8),
                             Text(
-                              moodDescriptions[widget.moodIndex],
-                              style: TextStyle(
-                                fontSize: 16,
+                              'Tu estado de ánimo',
+                              style: textTheme.titleMedium?.copyWith(
                                 color: colorScheme.onSurface,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: widget.moodColor.withAlpha(20),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: widget.moodColor.withAlpha(150),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: widget.moodColor.withAlpha(50),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                moodEmojis[widget.moodIndex],
+                                style: const TextStyle(fontSize: 28),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                moodDescriptions[widget.moodIndex],
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: colorScheme.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Note content field
-              TextFormField(
-                controller: _controller,
-                decoration: const InputDecoration(
-                  labelText: '¿Qué te hace sentir así?',
-                  hintText: 'Describe brevemente qué te hace sentir así...',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 24),
+                
+                // Note content field
+                TextFormField(
+                  controller: _controller,
+                  decoration: const InputDecoration(
+                    labelText: '¿Qué te hace sentir así?',
+                    hintText: 'Describe brevemente qué te hace sentir así...',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 5,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Por favor escribe algo sobre cómo te sientes';
+                    }
+                    return null;
+                  },
                 ),
-                maxLines: 5,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Por favor escribe algo sobre cómo te sientes';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              
-              // Save button
-              ElevatedButton(
-                onPressed: _isSubmitting ? null : _saveNote,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                const SizedBox(height: 24),
+                
+                // Save button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _validateAndSave,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Guardar nota',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                  ),
                 ),
-                child: _isSubmitting
-                    ? const CircularProgressIndicator()
-                    : const Text(
-                        'Guardar nota',
-                        style: TextStyle(fontSize: 16),
-                      ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
