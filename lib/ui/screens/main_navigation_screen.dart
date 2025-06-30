@@ -4,6 +4,7 @@ import 'home_screen.dart';
 import 'mood_prompt_screen.dart';
 import 'profile_screen.dart';
 import 'stats_screen.dart';
+import 'calendar_screen.dart';
 
 // Constants for animation durations and curves
 const _kAnimationDuration = Duration(milliseconds: 300);
@@ -29,6 +30,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
   // Screens with PageStorageKey to maintain scroll position
   final List<Widget> _screens = [
     const HomeScreen(),
+    const CalendarScreen(),
     StatsScreen(),
     ProfileScreen(),
   ];
@@ -36,12 +38,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
   // PageStorageKeys for maintaining scroll position
   final List<PageStorageKey> _pageStorageKeys = [
     const PageStorageKey('home_page'),
+    const PageStorageKey('calendar_page'),
     const PageStorageKey('stats_page'),
     const PageStorageKey('profile_page'),
   ];
   
   // Track if screens should be kept alive
-  final _shouldKeepAlives = List<bool>.filled(3, false);
+  final _shouldKeepAlives = List<bool>.filled(4, false);
 
   @override
   void initState() {
@@ -184,6 +187,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
               icon: const Icon(Icons.home_outlined, size: 24),
               selectedIcon: const Icon(Icons.home_filled, size: 24),
               label: 'Inicio',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.calendar_today_outlined, size: 24),
+              selectedIcon: const Icon(Icons.calendar_today, size: 24),
+              label: 'Calendario',
             ),
             NavigationDestination(
               icon: const Icon(Icons.insights_outlined, size: 24),

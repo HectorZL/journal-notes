@@ -1,26 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
-import '../../models/note.dart';
+import '../../state/providers/providers.dart';
 import '../widgets/jar_container.dart';
 import 'mood_prompt_screen.dart';
-
-// Provider for managing notes state
-final notesProvider = StateNotifierProvider<NotesNotifier, List<Note>>((ref) {
-  return NotesNotifier();
-});
-
-class NotesNotifier extends StateNotifier<List<Note>> {
-  NotesNotifier() : super([]);
-
-  void addNote(Note note) {
-    state = [...state, note];
-  }
-  
-  void clearNotes() {
-    state = [];
-  }
-}
 
 // Constants for mood-related data
 const _moodColors = [
@@ -46,7 +28,24 @@ class HomeScreen extends ConsumerWidget {
         emoji: _moodEmojis[note.moodIndex],
         color: _moodColors[note.moodIndex],
         size: 40.0,
+        id: note.id,
       );
+    }).toList();
+    
+    // Get today's notes
+    final today = DateTime.now();
+    final todayNotes = notes.where((note) {
+      return note.date.year == today.year &&
+             note.date.month == today.month &&
+             note.date.day == today.day;
+    }).toList();
+    
+    // Only show today's notes in the jar
+    final todaySpheres = spheresData.where((sphere) {
+      final note = notes.firstWhere((n) => n.id == sphere.id);
+      return note.date.year == today.year &&
+             note.date.month == today.month &&
+             note.date.day == today.day;
     }).toList();
 
     return Scaffold(
@@ -70,17 +69,17 @@ class HomeScreen extends ConsumerWidget {
               Expanded(
                 child: RepaintBoundary(
                   child: JarContainer(
-                    key: ValueKey('jar-container-${notes.length}'),
-                    spheresData: spheresData,
+                    key: ValueKey('jar-container-${todayNotes.length}'),
+                    spheresData: todaySpheres,
                     animateNewSpheres: true,
                   ),
                 ),
               ),
-              if (notes.isEmpty)
+              if (todayNotes.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 32.0),
                   child: Text(
-                    'Presiona + para agregar tu primer nota de ánimo',
+                    'Presiona + para agregar tu nota de ánimo de hoy',
                     style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -93,16 +92,29 @@ class HomeScreen extends ConsumerWidget {
         onPressed: () async {
           final result = await Navigator.push<bool>(
             context,
-            MaterialPageRoute(builder: (_) => const MoodPromptScreen()),
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => const MoodPromptScreen(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: child,
+                );
+              },
+            ),
           );
           
           if (result == true && context.mounted) {
+            // The animation is handled by the JarContainer with animateNewSpheres
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('¡Nota agregada!')),
+              const SnackBar(
+                content: Text('¡Nota de ánimo agregada!'),
+                duration: Duration(seconds: 2),
+              ),
             );
           }
         },
         child: const Icon(Icons.add),
+        heroTag: 'add_mood_button',
       ),
     );
   }

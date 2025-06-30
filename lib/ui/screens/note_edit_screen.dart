@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/note.dart';
-import 'home_screen.dart'; // Import home_screen to access notesProvider
+import '../../state/providers/providers.dart';
 
 class NoteEditScreen extends ConsumerStatefulWidget {
   final int moodIndex;
