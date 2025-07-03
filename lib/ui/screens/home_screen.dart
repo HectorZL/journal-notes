@@ -6,6 +6,7 @@ import '../../state/providers/providers.dart';
 import '../../models/note.dart';
 import '../widgets/ball_animation.dart';
 import '../widgets/jar_container/jar_container_export.dart';
+import 'mood_prompt_screen.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -207,6 +208,92 @@ class _MoodCircleAnimationState extends State<_MoodCircleAnimation> with SingleT
   }
 }
 
+class _AnimatedAddButton extends StatefulWidget {
+  final VoidCallback onTap;
+  
+  const _AnimatedAddButton({
+    required this.onTap,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _AnimatedAddButtonState createState() => _AnimatedAddButtonState();
+}
+
+class _AnimatedAddButtonState extends State<_AnimatedAddButton> 
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Opacity(
+              opacity: _opacityAnimation.value,
+              child: Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.add,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  size: 40,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -329,19 +416,80 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // The jar with all spheres
-                    RepaintBoundary(
-                      child: Container(
-                        width: MediaQuery.of(context).size.width * 0.9,
-                        height: MediaQuery.of(context).size.height * 0.6,
-                        child: JarContainer(
-                          key: ValueKey('jar-container-${todayNotes.length}'),
-                          spheresData: todaySpheres,
-                          animateNewSpheres: hasNewNote,
-                          jarColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                    if (todayNotes.isNotEmpty) ...[
+                      // The jar with all spheres - only show when there are notes
+                      RepaintBoundary(
+                        child: Container(
+                          width: MediaQuery.of(context).size.width * 0.9,
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          child: JarContainer(
+                            key: ValueKey('jar-container-${todayNotes.length}'),
+                            spheresData: todaySpheres,
+                            animateNewSpheres: hasNewNote,
+                            jarColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                          ),
                         ),
                       ),
-                    ),
+                    ] else ...[
+                      // Empty state with animation
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Sticker/message
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  '📝',
+                                  style: TextStyle(fontSize: 60),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '¡Agrega tu primera emoción del día!',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Toca el botón + para comenzar',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 40),
+                          // Animated + button
+                          _AnimatedAddButton(
+                            onTap: () {
+                              // Navigate to mood selection screen
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const MoodPromptScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                     
                     // Animated ball that flies into the jar
                     if (animationState.isAnimating && animationState.ballColor != null)
@@ -351,13 +499,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           // Reset the animation state using the notifier
                           ref.read(ballAnimationProvider.notifier).resetAnimation();
                         },
-                        child: const SizedBox.shrink(), // Empty child since we're using a Stack
+                        child: const SizedBox.shrink(),
                       ),
                   ],
                 ),
               ),
               
-              // Calendar will always be visible, no empty state message needed
+              // Add some spacing at the bottom
+              const SizedBox(height: 20),
             ],
           ),
         ),

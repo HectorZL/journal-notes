@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/note.dart';
@@ -124,17 +123,9 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
         duration: const Duration(seconds: 2),
       );
       
-      // Navigate back first, then show the snackbar
-      final fromCalendar = ModalRoute.of(context)?.settings.arguments == 'fromCalendar';
-      
-      if (fromCalendar) {
-        // If from calendar, pop twice (edit screen and details modal)
-        Navigator.of(context)
-          ..pop() // Close edit screen
-          ..pop(); // Close details modal
-      } else {
-        // If from home, pop once (edit screen) with result
-        Navigator.of(context).pop(true);
+      // Navigate back to home screen
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
       
       // Show snackbar after navigation is complete
