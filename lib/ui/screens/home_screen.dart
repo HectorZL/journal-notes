@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:notas_animo/ui/screens/mood_prompt_screen.dart';
 import '../../models/note.dart';
 import '../../state/providers/providers.dart';
-import 'note_edit_screen.dart';
 
 // Constants for mood-related data
 const _moodColors = [
-  Colors.green,
-  Colors.lightGreen,
-  Colors.yellow,
-  Colors.orange,
-  Colors.red,
+  Color(0xFF4CAF50), // Green - Happy
+  Color(0xFF8BC34A), // Light Green - Content
+  Color(0xFFFFC107), // Amber - Neutral
+  Color(0xFFFF9800), // Orange - Sad
+  Color(0xFFF44336), // Red - Very Sad
 ];
 
-const _moodEmojis = ['😄', '🙂', '😐', '🙁', '😞'];
+const _moodEmojis = ['😊', '🙂', '😐', '😔', '😢'];
+
+// Animation effects for each mood
+const List<Map<String, dynamic>> _moodAnimations = [
+  {'scale': 1.2, 'rotate': 0.1, 'bounce': 1.5}, // Happy
+  {'scale': 1.1, 'rotate': 0.05, 'bounce': 1.2}, // Content
+  {'scale': 1.0, 'rotate': 0.0, 'bounce': 1.0}, // Neutral
+  {'scale': 0.9, 'rotate': -0.05, 'bounce': 0.9}, // Sad
+  {'scale': 0.8, 'rotate': -0.1, 'bounce': 0.8}, // Very Sad
+];
+
+// Additional effects when tapped
+const _tapEffects = ['😄', '🙃', '🤔', '💧', '😭'];
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -23,15 +33,22 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStateMixin {
   bool _isInitialized = false;
   bool _isDeletingNotes = false;
   Note? _lastProcessedNote;
   final _contentKey = GlobalKey();
+  late AnimationController _floatController;
+  Map<String, AnimationController> _scaleControllers = {};
 
   @override
   void initState() {
     super.initState();
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+    
     // Initialize in the next frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -40,6 +57,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         });
       }
     });
+  }
+  
+  @override
+  void dispose() {
+    _floatController.dispose();
+    for (var controller in _scaleControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   // Filter today's notes
@@ -80,22 +106,125 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               spacing: 20,
               runSpacing: 20,
               children: todayNotes.map((note) {
-                return Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: _moodColors[note.moodIndex].withOpacity(0.2),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _moodColors[note.moodIndex],
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      _moodEmojis[note.moodIndex],
-                      style: const TextStyle(fontSize: 40),
-                    ),
+                final emojiKey = '${note.id}_${note.moodIndex}';
+                
+                // Initialize controllers if they don't exist
+                _scaleControllers[emojiKey] ??= AnimationController(
+                  vsync: this,
+                  duration: const Duration(milliseconds: 500),
+                );
+                
+                final controller = _scaleControllers[emojiKey]!;
+                
+                final bounceAnimation = Tween<double>(
+                  begin: 1.0,
+                  end: _moodAnimations[note.moodIndex]['bounce'],
+                ).animate(CurvedAnimation(
+                  parent: controller,
+                  curve: Curves.elasticOut,
+                ));
+                
+                final floatAnimation = Tween<double>(
+                  begin: -10.0,
+                  end: 10.0,
+                ).animate(CurvedAnimation(
+                  parent: _floatController,
+                  curve: Curves.easeInOut,
+                ));
+                
+                return GestureDetector(
+                  onTap: () {
+                    // Show note content in a dialog without animation
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Tu nota (${_getMoodDescription(note.moodIndex)})'),
+                        content: SingleChildScrollView(
+                          child: Text(note.content.isNotEmpty ? note.content : 'Sin contenido'),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cerrar'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: AnimatedBuilder(
+                    animation: Listenable.merge([bounceAnimation, floatAnimation]),
+                    builder: (context, _) {
+                      return Transform.translate(
+                        offset: Offset(0, floatAnimation.value * 0.5),
+                        child: Transform.rotate(
+                          angle: _moodAnimations[note.moodIndex]['rotate'] * 
+                                 (floatAnimation.value / 10),
+                          child: Transform.scale(
+                            scale: controller.isAnimating
+                                ? bounceAnimation.value
+                                : 1.0 + (floatAnimation.value / 50).abs(),
+                            child: Container(
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                color: _moodColors[note.moodIndex].withOpacity(0.2),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: _moodColors[note.moodIndex],
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _moodColors[note.moodIndex].withOpacity(0.3),
+                                    blurRadius: 10,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Main emoji
+                                  Text(
+                                    _moodEmojis[note.moodIndex],
+                                    style: const TextStyle(fontSize: 40),
+                                  ),
+                                  
+                                  // Tap effect
+                                  if (controller.isAnimating)
+                                    Positioned(
+                                      top: -10,
+                                      child: FadeTransition(
+                                        opacity: Tween<double>(
+                                          begin: 1.0,
+                                          end: 0.0,
+                                        ).animate(CurvedAnimation(
+                                          parent: controller,
+                                          curve: Curves.easeOut,
+                                        )),
+                                        child: Text(
+                                          _tapEffects[note.moodIndex],
+                                          style: TextStyle(
+                                            fontSize: 30,
+                                            color: _moodColors[note.moodIndex],
+                                            shadows: [
+                                              Shadow(
+                                                blurRadius: 5.0,
+                                                color: _moodColors[note.moodIndex]
+                                                    .withOpacity(0.7),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 );
               }).toList(),
@@ -118,6 +247,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
         ],
       ),
+      // Remove any floating action button that might be causing the duplicate
+      
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -182,39 +313,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Add button
-              GestureDetector(
-                onTap: () {
-                  // Navigate to mood prompt screen
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MoodPromptScreen(),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context).colorScheme.primary.withAlpha(77), 
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.add,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    size: 40,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              // Removed add button as per requirements
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -259,45 +359,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
   
-  Future<void> _navigateToNoteEditScreen(int moodIndex, Color moodColor, {Note? noteToEdit}) async {
-  try {
-    final result = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(
-        builder: (context) => NoteEditScreen(
-          initialMoodIndex: moodIndex,
-          moodColor: moodColor,
-          noteToEdit: noteToEdit,
-        ),
-      ),
-    );
-
-    if (result != null && mounted) {
-      final isNew = result['isNew'] as bool?;
-      if (isNew != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isNew ? 'Nota agregada' : 'Nota actualizada'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-      }
-    }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
+  // Get mood description based on index
+  String _getMoodDescription(int moodIndex) {
+    const moodDescriptions = [
+      'Feliz',
+      'Contento',
+      'Neutral',
+      'Triste',
+      'Muy triste',
+    ];
+    return moodDescriptions[moodIndex];
   }
-}
+  
+  // Note: Removed _navigateToNoteEditScreen as editing is now only available from calendar
   
   void _showClearConfirmation() {
     if (!mounted) return;

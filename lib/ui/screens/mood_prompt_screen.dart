@@ -16,27 +16,45 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
   late Animation<double> _scaleAnimation;
 
   final List<Color> moodColors = [
-    const Color(0xFF4CAF50), // Green
-    const Color(0xFF8BC34A), // Light Green
-    const Color(0xFFFFC107), // Amber
-    const Color(0xFFFF9800), // Orange
-    const Color(0xFFF44336), // Red
+    const Color(0xFF4CAF50), // Green - Happy
+    const Color(0xFF8BC34A), // Light Green - Good
+    const Color(0xFFFFC107), // Amber - Neutral
+    const Color(0xFFFF9800), // Orange - Not Good
+    const Color(0xFFF44336), // Red - Bad
   ];
 
   final List<String> moodDescriptions = [
-    '¡Excelente!',
-    'Bien',
+    '¡Feliz!',
+    'Contento',
     'Neutral',
-    'No muy bien',
-    'Mal'
+    'Triste',
+    'Muy triste'
   ];
 
   final List<String> moodIcons = [
-    '☀️', // Sunny
-    '⛅', // Partly sunny
-    '☁️', // Cloudy
-    '🌧️', // Rainy
-    '⛈️',  // Stormy
+    '😊', // Happy
+    '🙂', // Good
+    '😐', // Neutral
+    '😔', // Sad
+    '😢',  // Very Sad
+  ];
+  
+  // Animation effects for each mood
+  final List<Map<String, dynamic>> moodAnimations = [
+    {'scale': 1.2, 'rotate': 0.1, 'bounce': 1.5}, // Happy
+    {'scale': 1.1, 'rotate': 0.05, 'bounce': 1.2}, // Good
+    {'scale': 1.0, 'rotate': 0.0, 'bounce': 1.0}, // Neutral
+    {'scale': 0.9, 'rotate': -0.05, 'bounce': 0.9}, // Sad
+    {'scale': 0.8, 'rotate': -0.1, 'bounce': 0.8}, // Very Sad
+  ];
+  
+  // Additional effects when tapped
+  final List<String> tapEffects = [
+    '😄', // Happy face becomes bigger smile
+    '🙃', // Slight upside down
+    '🤔', // Thinking
+    '💧', // Tear drop
+    '😭', // Crying
   ];
 
   @override
@@ -71,21 +89,15 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
   }
 
   void _onMoodSelected(int index, BuildContext context) {
-    Navigator.push(
+    // Use pushReplacement to replace MoodPromptScreen with NoteEditScreen
+    // When NoteEditScreen is popped, it will return to HomeScreen
+    Navigator.pushReplacement(
       context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => NoteEditScreen(
+      MaterialPageRoute(
+        builder: (context) => NoteEditScreen(
           initialMoodIndex: index,
           moodColor: moodColors[index],
         ),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(0.0, 1.0);
-          const end = Offset.zero;
-          const curve = Curves.easeInOutQuart;
-          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-          var offsetAnimation = animation.drive(tween);
-          return SlideTransition(position: offsetAnimation, child: child);
-        },
       ),
     );
   }
@@ -97,7 +109,7 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
     final isSmallScreen = screenSize.width < 360;
     final buttonSize = isSmallScreen ? 60.0 : 70.0;
     final fontSize = isSmallScreen ? 14.0 : 16.0;
-    final moodButtons = List.generate(
+    final List<Widget> moodButtons = List.generate(
       moodIcons.length,
       (index) => _MoodButton(
         emoji: moodIcons[index],
@@ -106,8 +118,10 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
         onPressed: () => _onMoodSelected(index, context),
         size: buttonSize,
         fontSize: fontSize,
+        animation: moodAnimations[index],
+        tapEffect: tapEffects[index],
       ),
-    );
+    ).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -167,6 +181,8 @@ class _MoodButton extends StatefulWidget {
   final VoidCallback onPressed;
   final double size;
   final double fontSize;
+  final Map<String, dynamic> animation;
+  final String tapEffect;
 
   const _MoodButton({
     Key? key,
@@ -174,8 +190,10 @@ class _MoodButton extends StatefulWidget {
     required this.color,
     required this.label,
     required this.onPressed,
-    this.size = 70.0,
-    this.fontSize = 16.0,
+    required this.size,
+    required this.fontSize,
+    required this.animation,
+    required this.tapEffect,
   }) : super(key: key);
 
   @override
