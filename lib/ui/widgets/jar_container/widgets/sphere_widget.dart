@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/sphere_data.dart';
+import '../../../../models/sphere_data.dart';
 
 class SphereWidget extends StatelessWidget {
   final SphereData data;
@@ -21,24 +21,24 @@ class SphereWidget extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              data.color.withOpacity(0.9),
+              data.color.withValues(alpha: 230), // 0.9 * 255 ≈ 230
               HSLColor.fromColor(data.color).withLightness(0.6).toColor(),
             ],
           ),
           shape: BoxShape.circle,
           border: Border.all(
-            color: data.color.withOpacity(0.9),
+            color: data.color.withValues(alpha: 230), // 0.9 * 255 ≈ 230
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: data.color.withOpacity(0.3),
+color: data.color.withValues(alpha: 77), // 0.3 * 255 ≈ 77
               blurRadius: 8,
               spreadRadius: 1,
               offset: const Offset(0, 3),
             ),
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 26), // 0.1 * 255 ≈ 26
               blurRadius: 10,
               spreadRadius: -2,
               offset: const Offset(0, 5),
@@ -51,7 +51,7 @@ class SphereWidget extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 204), // 0.8 * 255 ≈ 204
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
@@ -64,7 +64,7 @@ class SphereWidget extends StatelessWidget {
                 height: 1.0,
                 shadows: [
                   Shadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 51), // 0.2 * 255 ≈ 51
                     offset: const Offset(1, 1),
                     blurRadius: 2,
                   ),

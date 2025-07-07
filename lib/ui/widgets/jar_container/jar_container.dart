@@ -1,8 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import '../../../../models/sphere_data.dart';
 
-import 'models/sphere_data.dart';
 import 'widgets/animated_sphere.dart';
 import 'widgets/jar_painter.dart';
 
@@ -60,37 +60,35 @@ class _JarContainerState extends State<JarContainer> {
   @override
   void didUpdateWidget(JarContainer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.spheresData != _previousSpheresData) {
-      _updateSpheres();
-    }
+    _updateSpheres();
   }
 
   void _updateSpheres() {
     if (!mounted) return;
     
-    // Check if there are actual changes
-    if (widget.spheresData == _previousSpheresData) return;
-    
     // Create a new list to avoid reference issues
     final newSpheresData = List<SphereData>.from(widget.spheresData);
     
-    // Only proceed if there are real changes
+    // Check if there are actual changes
     if (listEquals(newSpheresData, _previousSpheresData)) return;
+    
+    // Clear cache for removed spheres
+    final newIds = newSpheresData.map((s) => s.id).toSet();
+    _sphereCache.removeWhere((key, _) => !newIds.contains(key));
     
     // Update the previous data
     _previousSpheresData = newSpheresData;
     
-    // Clear cache only for removed or changed spheres
-    final newIds = newSpheresData.map((s) => s.id).toSet();
-    _sphereCache.removeWhere((key, _) => !newIds.contains(key));
-    
+    // Always rebuild when spheres change, even if going to empty state
     if (mounted) {
-      setState(() {
-        // The state update will trigger a rebuild
-      });
+      setState(() {});
     }
   }
   List<Widget> _buildSpheres(Size size) {
+    if (_previousSpheresData.isEmpty) {
+      return [];
+    }
+    
     return List.generate(
       _previousSpheresData.length,
       (index) => _buildSphere(_previousSpheresData[index], index, size),
@@ -155,13 +153,19 @@ class _JarContainerState extends State<JarContainer> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final size = Size(
+          constraints.maxWidth - (widget.padding * 2),
+          constraints.maxHeight - (widget.padding * 2),
+        );
+
         return CustomPaint(
+          size: size,
           painter: JarPainter(
-            jarColor: widget.jarColor ?? Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            jarColor: widget.jarColor ?? Colors.blue.withValues(alpha: 51), // 0.2 * 255 ≈ 51
             strokeWidth: widget.jarStrokeWidth ?? 2.0,
           ),
           child: Stack(
-            children: _buildSpheres(constraints.biggest),
+            children: _buildSpheres(size),
           ),
         );
       },

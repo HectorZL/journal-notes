@@ -168,7 +168,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
           color: colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: colorScheme.shadow.withOpacity(0.1),
+              color: colorScheme.shadow.withValues(alpha: 26), // 0.1 * 255 ≈ 26
               blurRadius: 8,
               offset: const Offset(0, -2),
             ),

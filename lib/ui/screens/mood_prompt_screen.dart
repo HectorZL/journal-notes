@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'note_edit_screen.dart';
 
 class MoodPromptScreen extends ConsumerStatefulWidget {
@@ -86,7 +85,22 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 360;
+    final buttonSize = isSmallScreen ? 60.0 : 70.0;
+    final fontSize = isSmallScreen ? 14.0 : 16.0;
     final moods = ['😄', '🙂', '😐', '🙁', '😞'];
+    final moodButtons = List.generate(
+      moods.length,
+      (index) => _MoodButton(
+        emoji: moods[index],
+        color: moodColors[index],
+        label: moodDescriptions[index],
+        onPressed: () => _onMoodSelected(index, context),
+        size: buttonSize,
+        fontSize: fontSize,
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -98,66 +112,42 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
         elevation: 0,
         scrolledUnderElevation: 1,
       ),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Selecciona tu estado de ánimo actual',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                    textAlign: TextAlign.center,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: SafeArea(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - 100,
                   ),
-                  const SizedBox(height: 40),
-                  // Animated mood buttons
-                  AnimationLimiter(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(
-                        moods.length,
-                        (index) => AnimationConfiguration.staggeredList(
-                          position: index,
-                          duration: const Duration(milliseconds: 500),
-                          child: SlideAnimation(
-                            horizontalOffset: 50.0,
-                            child: FadeInAnimation(
-                              child: _MoodButton(
-                                emoji: moods[index],
-                                color: moodColors[index],
-                                label: moodDescriptions[index],
-                                onPressed: () => _onMoodSelected(index, context),
-                              ),
-                            ),
-                          ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Selecciona tu estado de ánimo',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
+                      const SizedBox(height: 24),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: moodButtons,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 40),
-                  // Additional guidance text
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Text(
-                      'Tu estado de ánimo nos ayuda a entender mejor cómo te sientes y ofrecerte el mejor soporte.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -168,6 +158,8 @@ class _MoodButton extends StatefulWidget {
   final Color color;
   final String label;
   final VoidCallback onPressed;
+  final double size;
+  final double fontSize;
 
   const _MoodButton({
     Key? key,
@@ -175,87 +167,64 @@ class _MoodButton extends StatefulWidget {
     required this.color,
     required this.label,
     required this.onPressed,
+    this.size = 70.0,
+    this.fontSize = 16.0,
   }) : super(key: key);
 
   @override
   _MoodButtonState createState() => _MoodButtonState();
 }
 
-class _MoodButtonState extends State<_MoodButton> with SingleTickerProviderStateMixin {
-  late AnimationController _scaleController;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-      lowerBound: 0.0,
-      upperBound: 0.1,
-    )..addListener(() {
-        setState(() {});
-      });
-  }
-
-  @override
-  void dispose() {
-    _scaleController.dispose();
-    super.dispose();
-  }
-
+class _MoodButtonState extends State<_MoodButton> {
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    
-    return GestureDetector(
-      onTapDown: (_) => _scaleController.forward(),
-      onTapUp: (_) {
-        _scaleController.reverse();
-        widget.onPressed();
-      },
-      onTapCancel: () => _scaleController.reverse(),
-      child: Transform.scale(
-        scale: 1.0 - _scaleController.value,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                color: widget.color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(35),
-                border: Border.all(
-                  color: widget.color,
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.color.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: widget.onPressed,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              color: widget.color.withValues(alpha: 26), // 0.1 * 255 ≈ 26
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: widget.color.withValues(alpha: 77), // 0.3 * 255 ≈ 77
+                width: 2,
               ),
-              child: Center(
-                child: Text(
-                  widget.emoji,
-                  style: const TextStyle(fontSize: 32),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withValues(alpha: 26), // 0.1 * 255 ≈ 26
+                  blurRadius: 8,
+                  spreadRadius: 2,
                 ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                widget.emoji,
+                style: TextStyle(fontSize: widget.size * 0.4),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              widget.label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                  ),
-            ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: widget.size + 20,
+          child: Text(
+            widget.label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: widget.fontSize * 0.8,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/sphere_data.dart';
+import '../../../../models/sphere_data.dart';
 import 'sphere_widget.dart';
 
 class AnimatedSphere extends StatefulWidget {

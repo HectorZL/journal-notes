@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/note.dart';
@@ -91,7 +90,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
       final updatedNote = Note(
         id: isEditing ? widget.noteToEdit!.id : const Uuid().v4(),
         content: _controller.text.trim(),
-        date: isEditing ? widget.noteToEdit!.date : now,
+        date: now, // Always update the date when saving
         moodIndex: widget.moodIndex,
         color: widget.moodColor,
       );
@@ -99,9 +98,14 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
       // Get the current notes
       final notesNotifier = ref.read(notesProvider.notifier);
       
-      // If editing, remove the old note first
-      if (isEditing) {
-        await notesNotifier.removeNote(widget.noteToEdit!);
+      // Only remove the old note if we're editing and the note exists
+      if (isEditing && widget.noteToEdit != null) {
+        try {
+          await notesNotifier.removeNote(widget.noteToEdit!);
+        } catch (e) {
+          debugPrint('Error removing old note: $e');
+          // Continue with adding the new note even if removal fails
+        }
       }
       
       // Add the updated/new note
@@ -124,26 +128,10 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
         duration: const Duration(seconds: 2),
       );
       
-      // Navigate back first, then show the snackbar
-      final fromCalendar = ModalRoute.of(context)?.settings.arguments == 'fromCalendar';
-      
-      if (fromCalendar) {
-        // If from calendar, pop twice (edit screen and details modal)
-        Navigator.of(context)
-          ..pop() // Close edit screen
-          ..pop(); // Close details modal
-      } else {
-        // If from home, pop once (edit screen) with result
-        Navigator.of(context).pop(true);
-      }
-      
-      // Show snackbar after navigation is complete
+      // Navigate back to home screen
       if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (ScaffoldMessenger.maybeOf(context) != null) {
-            scaffoldMessenger.showSnackBar(snackBar);
-          }
-        });
+        // Return the updated note to trigger animation if it's a new note
+        Navigator.of(context).pop(!isEditing);
       }
     } catch (e) {
       if (mounted) {
@@ -168,6 +156,44 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
     }
   }
 
+  // Method to handle note deletion
+  Future<void> _deleteNote() async {
+    if (widget.noteToEdit == null) return;
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar nota'),
+        content: const Text('¿Estás seguro de que quieres eliminar esta nota?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await ref.read(notesProvider.notifier).removeNote(widget.noteToEdit!);
+        if (mounted) {
+          Navigator.of(context).pop(true); // Return true to indicate note was deleted
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al eliminar la nota')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -181,15 +207,8 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
       'Mal'
     ];
     
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (didPop) return;
-        final shouldPop = await _onWillPop();
-        if (shouldPop && mounted) {
-          Navigator.of(context).pop(false);
-        }
-      },
+    return WillPopScope(
+      onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.noteToEdit == null ? 'Nueva nota' : 'Editar nota'),
@@ -205,6 +224,12 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
           elevation: 0,
           scrolledUnderElevation: 1,
           actions: [
+            if (widget.noteToEdit != null && !_isSubmitting)
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: _deleteNote,
+                tooltip: 'Eliminar nota',
+              ),
             if (_isSubmitting)
               const Padding(
                 padding: EdgeInsets.only(right: 16.0),

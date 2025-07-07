@@ -151,7 +151,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getMoodColor(note.moodIndex).withOpacity(0.2),
+          backgroundColor: _getMoodColor(note.moodIndex).withValues(alpha: 51), // 0.2 * 255 ≈ 51
           child: Text(
             moodEmojis[note.moodIndex],
             style: const TextStyle(fontSize: 20),

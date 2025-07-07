@@ -31,16 +31,15 @@ class _BallToJarAnimationState extends State<BallToJarAnimation>
     
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
-    
-    _controller.addStatusListener((status) {
-      debugPrint('Animation status changed: $status');
-      if (status == AnimationStatus.completed) {
-        debugPrint('Ball animation completed');
-        widget.onComplete();
-      }
-    });
+      duration: const Duration(milliseconds: 1500),
+    )..addStatusListener((status) {
+        debugPrint('Animation status changed: $status');
+        if (status == AnimationStatus.completed) {
+          debugPrint('Ball animation completed');
+          // Small delay before calling onComplete to ensure the animation is fully visible
+          Future.delayed(const Duration(milliseconds: 300), widget.onComplete);
+        }
+      });
 
     // Animation for ball size (grow and then slight bounce)
     _ballSizeAnimation = TweenSequence<double>([
@@ -71,20 +70,20 @@ class _BallToJarAnimationState extends State<BallToJarAnimation>
 
     // Animation for ball position (from top of screen to jar)
     _ballPositionAnimation = Tween<Offset>(
-      begin: const Offset(0, -1.5), // Start from above the screen
-      end: const Offset(0, 0.2),    // End at the top of the jar
+      begin: const Offset(0, -0.5), // Start from just above the visible area
+      end: const Offset(0, 0.1),   // End slightly above the center
     ).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Curves.easeIn,
+        curve: Curves.easeInOutQuad,
       ),
     );
 
     // Fade in at start, then fade out at the end
     _opacityAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 10),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 80),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 20),
     ]).animate(
       CurvedAnimation(
         parent: _controller,
@@ -92,8 +91,9 @@ class _BallToJarAnimationState extends State<BallToJarAnimation>
       ),
     );
 
-    _controller.forward().then((_) {
-      widget.onComplete();
+    // Start the animation after a small delay to ensure the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.forward();
     });
   }
 
@@ -105,67 +105,51 @@ class _BallToJarAnimationState extends State<BallToJarAnimation>
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // The main content (jar)
-        widget.child,
-        
-        // The animated ball
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            final ballSize = _ballSizeAnimation.value;
-            final ballPosition = _ballPositionAnimation.value;
-            final bounce = _bounceAnimation.value;
-            final opacity = _opacityAnimation.value;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // The main content
+            Positioned.fill(child: widget.child),
             
-            // Calculate position based on screen size
-            final positionX = screenSize.width * 0.5 + (ballPosition.dx * 50);
-            final positionY = screenSize.height * 0.4 * (1 + ballPosition.dy);
-            
-            debugPrint('Ball position - X: $positionX, Y: $positionY, Size: $ballSize, Opacity: $opacity');
-            
-            return Positioned(
-              left: positionX - (ballSize * 0.5 * bounce),
-              top: positionY - (ballSize * 0.5 * bounce),
-              child: Transform.scale(
-                scale: bounce,
-                child: Opacity(
-                  opacity: opacity,
-                  child: Container(
-                    width: ballSize,
-                    height: ballSize,
-                    decoration: BoxDecoration(
-                      color: widget.ballColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: widget.ballColor.withOpacity(0.9),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                          offset: const Offset(0, 4),
+            // The animated ball - only show if animation is running
+            if (_controller.status == AnimationStatus.forward || 
+                 _controller.status == AnimationStatus.completed)
+              IgnorePointer(
+                child: AnimatedOpacity(
+                  opacity: _opacityAnimation.value,
+                  duration: Duration.zero,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: FractionalTranslation(
+                      translation: _ballPositionAnimation.value,
+                      child: Transform.scale(
+                        scale: _bounceAnimation.value,
+                        child: Container(
+                          width: _ballSizeAnimation.value,
+                          height: _ballSizeAnimation.value,
+                          decoration: BoxDecoration(
+                            color: widget.ballColor,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: widget.ballColor.withValues(alpha: 179), // 0.7 * 255 ≈ 179
+                                blurRadius: 15,
+                                spreadRadius: 5,
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                      gradient: RadialGradient(
-                        center: const Alignment(-0.2, -0.2),
-                        radius: 0.8,
-                        colors: [
-                          widget.ballColor,
-                          Color.lerp(widget.ballColor, Colors.black, 0.2)!,
-                        ],
-                        stops: const [0.4, 1.0],
                       ),
                     ),
                   ),
                 ),
               ),
-            );
-          },
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

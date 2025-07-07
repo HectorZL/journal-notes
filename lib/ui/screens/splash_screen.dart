@@ -100,7 +100,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: colorScheme.shadow.withOpacity(0.1),
+                          color: colorScheme.shadow.withValues(alpha: 26), // 0.1 * 255 ≈ 26
                           blurRadius: 16,
                           offset: const Offset(0, 8),
                         ),
