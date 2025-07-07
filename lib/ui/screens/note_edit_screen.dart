@@ -4,14 +4,132 @@ import 'package:uuid/uuid.dart';
 import '../../models/note.dart';
 import '../../state/providers/providers.dart';
 
+class _FloatingWeatherIcon extends StatefulWidget {
+  final IconData icon;
+  final bool isSelected;
+  final Color color;
+  final int index;
+
+  const _FloatingWeatherIcon({
+    Key? key,
+    required this.icon,
+    required this.isSelected,
+    required this.color,
+    required this.index,
+  }) : super(key: key);
+
+  @override
+  _FloatingWeatherIconState createState() => _FloatingWeatherIconState();
+}
+
+class _FloatingWeatherIconState extends State<_FloatingWeatherIcon> with TickerProviderStateMixin {
+  late AnimationController _floatController;
+  late Animation<double> _floatAnimation;
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    // Floating animation
+    _floatController = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 3 + widget.index),
+    )..repeat(reverse: true);
+    
+    _floatAnimation = Tween<double>(
+      begin: -10.0,
+      end: 10.0,
+    ).animate(CurvedAnimation(
+      parent: _floatController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // Scale animation for selection
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.easeOut,
+    ));
+    
+    if (widget.isSelected) {
+      _scaleController.forward();
+    }
+  }
+  
+  @override
+  void didUpdateWidget(_FloatingWeatherIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isSelected != oldWidget.isSelected) {
+      if (widget.isSelected) {
+        _scaleController.forward();
+      } else {
+        _scaleController.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_floatAnimation, _scaleAnimation]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _floatAnimation.value),
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: widget.isSelected 
+                    ? widget.color.withOpacity(0.1)
+                    : Colors.transparent,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: widget.isSelected 
+                      ? widget.color 
+                      : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                widget.icon,
+                size: 32,
+                color: widget.color,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+
 class NoteEditScreen extends ConsumerStatefulWidget {
-  final int moodIndex;
+  final int initialMoodIndex;
   final Color moodColor;
   final Note? noteToEdit;
   
   const NoteEditScreen({
     Key? key,
-    required this.moodIndex,
+    required this.initialMoodIndex,
     required this.moodColor,
     this.noteToEdit,
   }) : super(key: key);
@@ -24,10 +142,12 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
   final _formKey = GlobalKey<FormState>();
   final _controller = TextEditingController();
   bool _isSubmitting = false;
+  late int _currentMoodIndex;
 
   @override
   void initState() {
     super.initState();
+    _currentMoodIndex = widget.initialMoodIndex;
     // If editing an existing note, pre-fill the content
     if (widget.noteToEdit != null) {
       _controller.text = widget.noteToEdit!.content;
@@ -87,12 +207,12 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
       final now = DateTime.now();
       
       // Create the updated note
-      final updatedNote = Note(
-        id: isEditing ? widget.noteToEdit!.id : const Uuid().v4(),
+      final note = Note(
+        id: widget.noteToEdit?.id ?? const Uuid().v4(),
         content: _controller.text.trim(),
-        date: now, // Always update the date when saving
-        moodIndex: widget.moodIndex,
-        color: widget.moodColor,
+        moodIndex: _currentMoodIndex,
+        date: widget.noteToEdit?.date ?? DateTime.now(),
+        color: widget.noteToEdit?.color ?? Colors.blue, // Use existing color or default to blue
       );
 
       // Get the current notes
@@ -109,7 +229,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
       }
       
       // Add the updated/new note
-      await notesNotifier.addNote(updatedNote);
+      await notesNotifier.addNote(note);
       
       // Show success feedback
       if (!mounted) return;
@@ -198,13 +318,28 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final moodEmojis = ['😄', '🙂', '😐', '🙁', '😞'];
-    final moodDescriptions = [
-      '¡Excelente!',
-      'Bien',
-      'Neutral',
-      'No muy bien',
-      'Mal'
+    final weatherIcons = [
+      Icons.wb_sunny,  // Sunny
+      Icons.wb_cloudy,  // Partly Cloudy
+      Icons.cloud,      // Cloudy
+      Icons.grain,     // Rainy
+      Icons.thunderstorm, // Stormy
+    ];
+    
+    final weatherDescriptions = [
+      '¡Soleado!',
+      'Parcialmente nublado',
+      'Nublado',
+      'Lluvioso',
+      'Tormentoso'
+    ];
+    
+    final weatherColors = [
+      Colors.orange,
+      Colors.blueGrey[400]!,
+      Colors.grey[600]!,
+      Colors.blue[400]!,
+      Colors.deepPurple[400]!,
     ];
     
     return WillPopScope(
@@ -285,40 +420,34 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          decoration: BoxDecoration(
-                            color: widget.moodColor.withAlpha(20),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: widget.moodColor.withAlpha(150),
-                              width: 1.5,
+                        SizedBox(
+                          height: 100,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: List.generate(
+                              weatherIcons.length,
+                              (index) => Positioned(
+                                left: index * 70.0,
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _currentMoodIndex = index),
+                                  child: _FloatingWeatherIcon(
+                              icon: weatherIcons[index],
+                                    isSelected: _currentMoodIndex == index,
+                              color: weatherColors[index],
+                              index: index,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: widget.moodColor.withAlpha(50),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                moodEmojis[widget.moodIndex],
-                                style: const TextStyle(fontSize: 28),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                moodDescriptions[widget.moodIndex],
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: colorScheme.onSurface,
-                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          weatherDescriptions[_currentMoodIndex],
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: weatherColors[_currentMoodIndex],
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],

@@ -31,6 +31,14 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
     'Mal'
   ];
 
+  final List<String> moodIcons = [
+    '☀️', // Sunny
+    '⛅', // Partly sunny
+    '☁️', // Cloudy
+    '🌧️', // Rainy
+    '⛈️',  // Stormy
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -67,7 +75,7 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => NoteEditScreen(
-          moodIndex: index,
+          initialMoodIndex: index,
           moodColor: moodColors[index],
         ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -89,11 +97,10 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
     final isSmallScreen = screenSize.width < 360;
     final buttonSize = isSmallScreen ? 60.0 : 70.0;
     final fontSize = isSmallScreen ? 14.0 : 16.0;
-    final moods = ['😄', '🙂', '😐', '🙁', '😞'];
     final moodButtons = List.generate(
-      moods.length,
+      moodIcons.length,
       (index) => _MoodButton(
-        emoji: moods[index],
+        emoji: moodIcons[index],
         color: moodColors[index],
         label: moodDescriptions[index],
         onPressed: () => _onMoodSelected(index, context),
@@ -196,7 +203,7 @@ class _MoodButtonState extends State<_MoodButton> {
               boxShadow: [
                 BoxShadow(
                   color: widget.color.withValues(alpha: 26), // 0.1 * 255 ≈ 26
-                  blurRadius: 8,
+                  blurRadius: 10,
                   spreadRadius: 2,
                 ),
               ],
@@ -204,7 +211,7 @@ class _MoodButtonState extends State<_MoodButton> {
             child: Center(
               child: Text(
                 widget.emoji,
-                style: TextStyle(fontSize: widget.size * 0.4),
+                style: TextStyle(fontSize: widget.size * 0.5),
               ),
             ),
           ),

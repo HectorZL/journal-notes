@@ -236,7 +236,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => NoteEditScreen(
-                            moodIndex: note.moodIndex,
+                            initialMoodIndex: note.moodIndex,
                             moodColor: _getMoodColor(note.moodIndex),
                             noteToEdit: note,
                           ),
