@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:notas_animo/ui/screens/note_edit_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -283,17 +284,84 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     const SizedBox(height: 16),
                   ],
                   const SizedBox(height: 8),
+                  const Divider(),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancelar'),
+                        onPressed: () {
+                          Navigator.pop(context); // Close the dialog
+                          // Navigate to edit screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NoteEditScreen(
+                                initialMoodIndex: note.moodIndex,
+                                moodColor: _getMoodColor(note.moodIndex),
+                                noteToEdit: note,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit, size: 20),
+                            SizedBox(width: 4),
+                            Text('Editar'),
+                          ],
+                        ),
                       ),
+                      const VerticalDivider(),
                       TextButton(
                         onPressed: () {
-                          // TODO: Implement delete functionality
-                          Navigator.pop(context);
+                          Navigator.pop(context); // Close the details dialog
+                          // Show confirmation dialog
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Eliminar nota'),
+                                content: const Text('¿Estás seguro de que quieres eliminar esta nota?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () async {
+                                      Navigator.pop(context); // Close confirmation dialog
+                                      try {
+                                        final notesNotifier = ref.read(notesProvider.notifier);
+                                        await notesNotifier.deleteNote(note);
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Nota eliminada correctamente'),
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error al eliminar la nota: $e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                    ),
+                                    child: const Text('Eliminar'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
                         },
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.red,
