@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../state/providers/providers.dart';
 
 final authProvider = ChangeNotifierProvider<AuthProvider>((ref) => AuthProvider());
 
@@ -16,9 +17,13 @@ class AuthProvider extends ChangeNotifier {
   String? get userEmail => _userEmail;
   String? get userName => _userName;
 
-  AuthProvider() {
+  final Ref? _ref;
+  
+  AuthProvider([this._ref]) {
     _loadUser();
   }
+
+  get id => null;
 
   Future<void> _loadUser() async {
     try {
@@ -31,6 +36,15 @@ class AuthProvider extends ChangeNotifier {
         _userId = id;
         _userEmail = email;
         _userName = name;
+        
+        // Initialize notes provider when loading user from storage
+        if (_ref != null) {
+          final userId = int.tryParse(id);
+          if (userId != null) {
+            _ref!.read(notesProvider.notifier).setCurrentUser(userId);
+          }
+        }
+        
         notifyListeners();
       }
     } catch (e) {
@@ -48,6 +62,14 @@ class AuthProvider extends ChangeNotifier {
       _userId = id;
       _userEmail = email;
       _userName = name;
+      
+      // Initialize notes provider with the logged-in user
+      if (_ref != null) {
+        final userId = int.tryParse(id);
+        if (userId != null) {
+          _ref!.read(notesProvider.notifier).setCurrentUser(userId);
+        }
+      }
       
       notifyListeners();
     } catch (e) {

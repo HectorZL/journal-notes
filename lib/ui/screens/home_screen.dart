@@ -89,8 +89,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     }
     
     // Get today's notes
-    final notes = ref.watch(notesProvider);
-    final todayNotes = _getTodaysNotes(notes);
+    final notesAsync = ref.watch(notesProvider);
+    final todayNotes = notesAsync.when(
+      data: (notes) => _getTodaysNotes(notes),
+      loading: () => [],
+      error: (error, stack) {
+        debugPrint('Error loading notes: $error');
+        return [];
+      },
+    );
     final hasNotes = todayNotes.isNotEmpty;
                       
     // Mood icons display
@@ -239,12 +246,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       appBar: AppBar(
         title: const Text('Mis emociones'),
         actions: [
-          if (notes.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: _showClearConfirmation,
-              tooltip: 'Limpiar todo',
-            ),
+          // Show delete button only if we have notes
+          Builder(
+            builder: (context) {
+              return notesAsync.when(
+                data: (notes) => notes.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: _showClearConfirmation,
+                        tooltip: 'Limpiar todo',
+                      )
+                    : const SizedBox.shrink(),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              );
+            },
+          ),
         ],
       ),
       // Remove any floating action button that might be causing the duplicate

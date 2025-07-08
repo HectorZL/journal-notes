@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
+import 'package:notas_animo/providers/auth_provider.dart';
 import '../../models/note.dart';
 import '../../state/providers/providers.dart';
 
@@ -206,30 +206,33 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
       final isEditing = widget.noteToEdit != null;
       final now = DateTime.now();
       
-      // Create the updated note
-      final note = Note(
-        id: widget.noteToEdit?.id ?? const Uuid().v4(),
-        content: _controller.text.trim(),
-        moodIndex: _currentMoodIndex,
-        date: widget.noteToEdit?.date ?? DateTime.now(),
-        color: widget.noteToEdit?.color ?? Colors.blue, // Use existing color or default to blue
-      );
-
-      // Get the current notes
-      final notesNotifier = ref.read(notesProvider.notifier);
+      // Get current user ID from auth provider
+      final auth = ref.read(authProvider);
+      final userId = int.tryParse(auth.userId ?? '');
       
-      // Only remove the old note if we're editing and the note exists
-      if (isEditing && widget.noteToEdit != null) {
-        try {
-          await notesNotifier.removeNote(widget.noteToEdit!);
-        } catch (e) {
-          debugPrint('Error removing old note: $e');
-          // Continue with adding the new note even if removal fails
-        }
+      if (userId == null) {
+        throw Exception('No se pudo obtener el ID de usuario válido');
       }
       
-      // Add the updated/new note
-      await notesNotifier.addNote(note);
+      // Create the updated note
+      final note = Note(
+        id: widget.noteToEdit?.id,
+        userId: userId,
+        content: _controller.text.trim(),
+        moodIndex: _currentMoodIndex,
+        date: widget.noteToEdit?.date ?? now,
+        color: widget.noteToEdit?.color ?? Colors.blue,
+      );
+
+      // Get the notes notifier
+      final notesNotifier = ref.read(notesProvider.notifier);
+      
+      // Save to database
+      if (isEditing) {
+        await notesNotifier.updateNote(note);
+      } else {
+        await notesNotifier.addNote(note);
+      }
       
       // Show success feedback
       if (!mounted) return;
@@ -250,8 +253,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
       
       // Navigate back to home screen
       if (mounted) {
-        // Return the updated note to trigger animation if it's a new note
-        Navigator.of(context).pop(!isEditing);
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -278,7 +280,7 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
 
   // Method to handle note deletion
   Future<void> _deleteNote() async {
-    if (widget.noteToEdit == null) return;
+    if (widget.noteToEdit == null || widget.noteToEdit!.id == null) return;
     
     final confirmed = await showDialog<bool>(
       context: context,
@@ -300,14 +302,14 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
 
     if (confirmed == true && mounted) {
       try {
-        await ref.read(notesProvider.notifier).removeNote(widget.noteToEdit!);
+        await ref.read(notesProvider.notifier).deleteNote(widget.noteToEdit!);
         if (mounted) {
           Navigator.of(context).pop(true); // Return true to indicate note was deleted
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error al eliminar la nota')),
+            SnackBar(content: Text('Error al eliminar la nota: $e')),
           );
         }
       }

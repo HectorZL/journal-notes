@@ -1,19 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database_helper.dart';
 import '../providers/auth_provider.dart';
 
 final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(
-    ref,
-    DatabaseHelper(),
-  );
+  return AuthService(ref);
 });
 
 class AuthService {
   final Ref _ref;
-  final DatabaseHelper _dbHelper;
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   
-  AuthService(this._ref, this._dbHelper);
+  AuthService(this._ref);
   
   // Check if user is logged in
   bool isLoggedIn() {
@@ -50,31 +48,51 @@ class AuthService {
   // Login user
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
+      // Input validation
+      if (email.isEmpty || password.isEmpty) {
+        return {'success': false, 'message': 'Por favor ingresa tu correo y contraseña'};
+      }
+      
+      // Ensure database is initialized
+      try {
+        await _dbHelper.database;
+      } catch (e) {
+        debugPrint('Database error: $e');
+        return {'success': false, 'message': 'Error al conectar con la base de datos. Por favor, inténtalo de nuevo.'};
+      }
+      
       final user = await _dbHelper.getUserByEmail(email);
       
-      if (user == null) {
+      if (user == null || user.isEmpty) {
         return {'success': false, 'message': 'Usuario no encontrado'};
       }
       
       final isValid = await _dbHelper.validateUser(email, password);
       
       if (isValid) {
+        final userId = user[DatabaseHelper.columnId]?.toString();
+        final userName = user[DatabaseHelper.columnName]?.toString() ?? 'Usuario';
+        
+        if (userId == null) {
+          return {'success': false, 'message': 'Error en los datos del usuario'};
+        }
+        
         await _ref.read(authProvider).login(
-          user[DatabaseHelper.columnId].toString(),
+          userId,
           email,
-          user[DatabaseHelper.columnName],
+          userName,
         );
         
         return {
           'success': true,
           'user': {
-            'id': user[DatabaseHelper.columnId],
-            'name': user[DatabaseHelper.columnName],
+            'id': userId,
+            'name': userName,
             'email': email,
           }
         };
       } else {
-        return {'success': false, 'message': 'Contraseña incorrecta'};
+        return {'success': false, 'message': 'Correo o contraseña incorrectos'};
       }
     } catch (e) {
       return {'success': false, 'message': 'Error al iniciar sesión: $e'};
@@ -84,16 +102,29 @@ class AuthService {
   // Register new user
   Future<Map<String, dynamic>> register(String name, String email, String password) async {
     try {
+      // Input validation
+      if (name.isEmpty || email.isEmpty || password.isEmpty) {
+        return {'success': false, 'message': 'Por favor completa todos los campos'};
+      }
+      
+      // Ensure database is initialized
+      try {
+        await _dbHelper.database;
+      } catch (e) {
+        debugPrint('Database error: $e');
+        return {'success': false, 'message': 'Error al conectar con la base de datos. Por favor, inténtalo de nuevo.'};
+      }
+      
       // Check if user already exists
       final existingUser = await _dbHelper.getUserByEmail(email);
-      if (existingUser != null) {
+      if (existingUser != null && existingUser.isNotEmpty) {
         return {'success': false, 'message': 'El correo ya está registrado'};
       }
       
       // Create new user
       final userId = await _dbHelper.insertUser({
-        DatabaseHelper.columnName: name,
-        DatabaseHelper.columnEmail: email,
+        DatabaseHelper.columnName: name.trim(),
+        DatabaseHelper.columnEmail: email.trim().toLowerCase(),
         DatabaseHelper.columnPassword: password,
       });
       

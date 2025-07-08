@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:email_validator/email_validator.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../widgets/base_screen.dart';
@@ -82,6 +83,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final navService = ref.read(navigationServiceProvider);
+    final isDark = theme.brightness == Brightness.dark;
 
     return BaseScreen(
       title: 'Crear cuenta',
@@ -92,43 +94,76 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       child: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // App logo and title
-              Icon(
-                Icons.emoji_emotions_outlined,
-                size: 80,
-                color: colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Crea tu cuenta',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onBackground,
+              // Animated logo
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                height: 100,
+                child: Center(
+                  child: Icon(
+                    Icons.emoji_emotions_outlined,
+                    size: 80,
+                    color: colorScheme.primary,
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
+              
+              // Title
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  'Crea tu cuenta',
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                  key: const ValueKey('title_text'),
+                ),
+              ),
+              
               const SizedBox(height: 8),
-              Text(
-                'Completa el formulario para comenzar',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+              
+              // Subtitle
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  'Completa el formulario para comenzar',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                  key: const ValueKey('subtitle_text'),
                 ),
-                textAlign: TextAlign.center,
               ),
+              
               const SizedBox(height: 32),
 
               // Name field
               TextFormField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
+                style: GoogleFonts.poppins(),
+                decoration: InputDecoration(
                   labelText: 'Nombre completo',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
+                  hintText: 'Tu nombre completo',
+                  prefixIcon: const Icon(Icons.person_outline_rounded),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -140,16 +175,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   return null;
                 },
               ),
+              
               const SizedBox(height: 16),
 
               // Email field
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
+                style: GoogleFonts.poppins(),
+                decoration: InputDecoration(
                   labelText: 'Correo electrónico',
-                  prefixIcon: Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(),
+                  hintText: 'tucorreo@ejemplo.com',
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -161,15 +209,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   return null;
                 },
               ),
+              
               const SizedBox(height: 16),
 
               // Password field
               TextFormField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
+                style: GoogleFonts.poppins(),
                 decoration: InputDecoration(
                   labelText: 'Contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  hintText: '••••••••',
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
@@ -180,7 +231,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       setState(() => _obscurePassword = !_obscurePassword);
                     },
                   ),
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -192,15 +253,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   return null;
                 },
               ),
+              
               const SizedBox(height: 16),
 
               // Confirm password field
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirmPassword,
+                style: GoogleFonts.poppins(),
                 decoration: InputDecoration(
                   labelText: 'Confirmar contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  hintText: '••••••••',
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureConfirmPassword
@@ -211,7 +275,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
                     },
                   ),
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -223,19 +297,69 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   return null;
                 },
               ),
+              
               const SizedBox(height: 32),
 
               // Register button
               FilledButton(
                 onPressed: _isLoading ? null : _register,
                 style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  elevation: 0,
                 ),
-                child: const Text('Crear cuenta'),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'Crear cuenta',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
+
+              const SizedBox(height: 24),
+
+              // Divider
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(
+                      color: colorScheme.outlineVariant,
+                      thickness: 1,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      'O',
+                      style: GoogleFonts.poppins(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: colorScheme.outlineVariant,
+                      thickness: 1,
+                    ),
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 24),
 
               // Login prompt
@@ -244,16 +368,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   Text(
                     '¿Ya tienes una cuenta?',
-                    style: theme.textTheme.bodyMedium,
+                    style: GoogleFonts.poppins(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
                   ),
+                  const SizedBox(width: 4),
                   TextButton(
                     onPressed: _isLoading
                         ? null
                         : () => navService.pop(context),
-                    child: const Text('Inicia sesión'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: colorScheme.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    ),
+                    child: Text(
+                      'Inicia sesión',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),
+              
+              const SizedBox(height: 24),
             ],
           ),
         ),
