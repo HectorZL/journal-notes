@@ -46,9 +46,27 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
   // Track if screens should be kept alive
   final _shouldKeepAlives = List<bool>.filled(4, false);
 
+  // Add controller for FAB animation
+  late final AnimationController _fabController;
+  late final Animation<double> _fabAnimation;
+  
   @override
   void initState() {
     super.initState();
+    
+    // Initialize FAB animation
+    _fabController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    
+    _fabAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _fabController,
+      curve: Curves.easeInOut,
+    ));
     
     // Initialize animation controllers
     _fadeControllers = List.generate(
@@ -78,6 +96,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
   @override
   void dispose() {
     // Dispose all animation controllers
+    _fabController.dispose();
     for (final controller in _fadeControllers) {
       controller.dispose();
     }
@@ -115,35 +134,48 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
     final colorScheme = Theme.of(context).colorScheme;
     
     return Scaffold(
-      // Floating action button with optimized animation
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, _, __) => const MoodPromptScreen(),
-              transitionsBuilder: (context, animation, _, child) {
-                const begin = Offset(0.0, 1.0);
-                const end = Offset.zero;
-                const curve = Curves.easeInOutQuart;
-                
-                final tween = Tween(begin: begin, end: end)
-                    .chain(CurveTween(curve: curve));
-                
-                return SlideTransition(
-                  position: animation.drive(tween),
-                  child: child,
-                );
-              },
-            ),
-          );
-        },
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
-        elevation: 4,
-        highlightElevation: 8,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, size: 28),
+      // Floating action button with pulsing animation
+      floatingActionButton: ScaleTransition(
+        scale: _fabAnimation,
+        child: FloatingActionButton(
+          onPressed: () {
+            // Add a little bounce effect when pressed
+            _fabController.stop();
+            _fabController.forward();
+            
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) {
+                _fabController.repeat(reverse: true);
+              }
+            });
+            
+            Navigator.push(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, _, __) => const MoodPromptScreen(),
+                transitionsBuilder: (context, animation, _, child) {
+                  const begin = Offset(0.0, 1.0);
+                  const end = Offset.zero;
+                  const curve = Curves.easeInOutQuart;
+                  
+                  final tween = Tween(begin: begin, end: end)
+                      .chain(CurveTween(curve: curve));
+                  
+                  return SlideTransition(
+                    position: animation.drive(tween),
+                    child: child,
+                  );
+                },
+              ),
+            );
+          },
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          elevation: 4,
+          highlightElevation: 8,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add, size: 28),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       // Use IndexedStack to maintain state of all screens
