@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'ui/screens/splash_screen.dart';
+import 'package:flutter/services.dart';
+import 'data/database_helper.dart';
+import 'services/navigation_service.dart';
 
-void main() {
+Future<void> main() async {
   // Enable better error handling
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -10,30 +12,84 @@ void main() {
   ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
     return Material(
       child: Center(
-        child: Text(
-          '¡Ups! Algo salió mal. Por favor, reinicia la aplicación.',
-          style: TextStyle(
-            color: Colors.red,
-            fontSize: 16,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                '¡Ups! Algo salió mal.\nPor favor, reinicia la aplicación.',
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // Try to recover by restarting the app
+                  runApp(ProviderScope(child: MyApp()));
+                },
+                child: const Text('Reintentar'),
+              ),
+            ],
           ),
-          textAlign: TextAlign.center,
         ),
       ),
     );
   };
   
+  // Initialize database
+  try {
+    final dbHelper = DatabaseHelper();
+    await dbHelper.database;
+    debugPrint('Database initialized successfully');
+  } catch (e) {
+    debugPrint('Error initializing database: $e');
+    // Show error UI but don't crash
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('Error al inicializar la base de datos: $e'),
+          ),
+        ),
+      ),
+    );
+    return;
+  }
+  
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
   // Run the app
-  runApp(ProviderScope(child: MyApp()));
+  runApp(
+    ProviderScope(
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends ConsumerWidget {
+  const MyApp({Key? key}) : super(key: key);
+  
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Get navigation service from provider
+    final navService = ref.read(navigationServiceProvider);
+    
     return MaterialApp(
-      title: 'Notas de ánimo',
+      title: 'Mood Notes',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
-      home: const SplashScreen(),
+      initialRoute: navService.getInitialRoute(),
+      onGenerateRoute: (settings) => navService.generateRoute(settings),
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -48,23 +104,44 @@ class MyApp extends ConsumerWidget {
           scrolledUnderElevation: 1,
         ),
         cardTheme: CardTheme(
-          elevation: 0,
+          elevation: 1,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant,
-              width: 1,
-            ),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          filled: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
         ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        // Add more theme configurations as needed
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -75,15 +152,12 @@ class MyApp extends ConsumerWidget {
           tertiary: const Color(0xFFEFB8C8), // Tertiary color for dark theme
         ),
         cardTheme: CardTheme(
-          elevation: 0,
+          elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant,
-              width: 1,
-            ),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
+        // Add more dark theme configurations as needed
       ),
     );
   }

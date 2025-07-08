@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'auth/login_screen.dart';
 import 'main_navigation_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -13,6 +15,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
@@ -37,27 +40,47 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     );
 
     _controller.forward();
+    _checkAuthState();
+  }
 
-    // Navigate to home after animation completes
-    // Use a try-catch block for better error handling
-    Future.microtask(() async {
-      try {
-        await Future.delayed(const Duration(seconds: 2));
-        if (!mounted) return;
-        
-        await Navigator.pushReplacement(
+  Future<void> _checkAuthState() async {
+    try {
+      // Wait for both the animation and auth check
+      await Future.wait([
+        _controller.forward(),
+        Future.delayed(const Duration(seconds: 1)), // Minimum splash time
+      ]);
+
+      if (!mounted) return;
+
+      // Check if user is logged in
+      final userId = await _storage.read(key: 'user_id');
+      
+      if (mounted) {
+        if (userId != null) {
+          // User is logged in, go to home
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+          );
+        } else {
+          // User is not logged in, go to login
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error in splash screen: $e');
+      // In case of error, still navigate to login
+      if (mounted) {
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        // If navigation fails, try one more time with a simpler approach
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
-          (route) => false,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       }
-    });
+    }
   }
 
   @override
@@ -91,16 +114,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Animated emoji icon
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 800),
+                  // App logo with shadow
+                  Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: colorScheme.surface,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: colorScheme.shadow.withValues(alpha: 26), // 0.1 * 255 ≈ 26
+                          color: Colors.black.withOpacity(0.1),
                           blurRadius: 16,
                           offset: const Offset(0, 8),
                         ),
@@ -113,18 +135,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                     ),
                   ),
                   const SizedBox(height: 32),
-                  // App name with animated text style
-                  AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 500),
-                    style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+                  // App name
+                  Text(
+                    'Mood Notes',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
                         ),
-                    child: const Text('Notas de Ánimo'),
                   ),
                   const SizedBox(height: 32),
-                  // Loading indicator with custom styling
+                  // Loading indicator
                   SizedBox(
                     width: 40,
                     height: 40,
