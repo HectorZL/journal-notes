@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/stats_service.dart';
+import '../../providers/auth_provider.dart';
 
 class StatsScreen extends ConsumerStatefulWidget {
   const StatsScreen({Key? key}) : super(key: key);
@@ -12,57 +12,49 @@ class StatsScreen extends ConsumerStatefulWidget {
 }
 
 class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderStateMixin {
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
-  late Animation<Offset> _slideAnimation;
-  
   // State variables
   Map<String, dynamic>? _statsData;
   bool _isLoading = true;
   String? _errorMessage;
   int? _userId;
+  
+  // Animation controllers
+  late final AnimationController _fadeController;
+  late final AnimationController _slideController;
+  late final Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
-    _initializeData();
     
-    try {
-      // Initialize date formatting for Spanish locale
-      initializeDateFormatting('es_ES', null);
-      
-      // Initialize animations
-      _fadeController = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 800),
-      );
-      
-      // Initialize fade controller with a tween
-      _fadeController.animateTo(1.0, duration: const Duration(milliseconds: 800));
-      
-      _slideController = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 500),
-      );
-      
-      _slideAnimation = Tween<Offset>(
-        begin: const Offset(0, 0.1),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: _slideController,
-        curve: Curves.easeOutCubic,
-      ));
-      
-      // Start animations with a slight delay
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) {
-          _fadeController.forward();
-          _slideController.forward();
-        }
-      });
-    } catch (e) {
-      debugPrint('Error initializing stats screen: $e');
-    }
+    // Initialize animations
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    // Initialize date formatting for Spanish locale
+    initializeDateFormatting('es_ES', null);
+    
+    // Start animations
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fadeController.forward();
+      _slideController.forward();
+      _initializeData();
+    });
   }
   
   Future<void> _initializeData() async {
@@ -72,19 +64,19 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
         _errorMessage = null;
       });
 
-      // Get user ID from shared preferences
-      final prefs = await SharedPreferences.getInstance();
-      _userId = prefs.getInt('userId');
+      // Get user from auth provider
+      final auth = ref.read(authProvider);
+      _userId = auth.userId != null ? int.tryParse(auth.userId!) : null;
 
       if (_userId == null) {
-        throw Exception('No se pudo obtener el ID del usuario');
+        throw Exception('No se pudo obtener el ID del usuario. Por favor, inicia sesión nuevamente.');
       }
 
       // Get stats service
       final statsService = ref.read(statsServiceProvider);
       
       // Fetch weekly stats
-      _statsData = await statsService.getWeeklyStats(_userId!);
+      _statsData = await statsService.getWeeklyStats(_userId);
       
       if (mounted) {
         setState(() {
@@ -108,12 +100,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
 
   @override
   void dispose() {
-    try {
-      _fadeController.dispose();
-      _slideController.dispose();
-    } catch (e) {
-      debugPrint('Error disposing controllers: $e');
-    }
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
   
@@ -152,22 +140,29 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
   }
 
   // Build error message
-  Widget _buildErrorMessage() {
+  Widget _buildErrorView() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const Icon(Icons.error_outline, size: 48, color: Colors.red),
           const SizedBox(height: 16),
-          Text(
-            _errorMessage ?? 'Ocurrió un error inesperado',
-            style: const TextStyle(color: Colors.red),
-            textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Text(
+              _errorMessage ?? 'Error desconocido',
+              style: const TextStyle(fontSize: 16, color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
             onPressed: _refreshData,
-            child: const Text('Reintentar'),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reintentar'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
           ),
         ],
       ),
@@ -243,7 +238,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
   // Build weekly chart
   Widget _buildWeeklyChart() {
     if (_isLoading) return _buildLoadingIndicator();
-    if (_errorMessage != null) return _buildErrorMessage();
+    if (_errorMessage != null) return _buildErrorView();
     if (_statsData == null || _statsData!['notesPerDay'].isEmpty) {
       return _buildEmptyState();
     }
@@ -477,7 +472,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
                 const Center(child: CircularProgressIndicator()),
                 const SizedBox(height: 32),
               ] else if (_errorMessage != null) ...[
-                _buildErrorMessage(),
+                _buildErrorView(),
               ] else ...[
                 // Estado de ánimo más común
                 _buildStatCard(

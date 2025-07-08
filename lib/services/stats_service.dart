@@ -128,7 +128,10 @@ class StatsService {
   // Process notes per day data
   List<Map<String, dynamic>> _processNotesPerDay(List<Map<String, dynamic>> rawData) {
     return rawData.map((day) {
-      final date = DateTime.parse(day['day'] as String);
+      // Handle both String and DateTime date formats
+      final date = day['day'] is String 
+          ? DateTime.parse(day['day'] as String)
+          : (day['day'] as DateTime);
       return {
         'date': date,
         'count': day['count'] as int,

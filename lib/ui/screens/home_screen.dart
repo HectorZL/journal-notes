@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:notas_animo/state/providers/providers.dart';
 import '../../models/note.dart';
-import '../../state/providers/providers.dart';
+import '../../providers/auth_provider.dart';
 
 // Constants for mood-related data
 const _moodColors = [
@@ -50,11 +51,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     )..repeat(reverse: true);
     
     // Initialize in the next frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
+        // Get the current user ID
+        final userId = ref.read(authProvider).userId;
+        
+        // If user is logged in, load their notes
+        if (userId != null) {
+          try {
+            final userIdInt = int.tryParse(userId);
+            if (userIdInt != null) {
+              await ref.read(notesProvider.notifier).loadNotes(userId: userIdInt);
+            }
+          } catch (e) {
+            debugPrint('Error loading notes: $e');
+            // Still set initialized to true to show the UI even if there's an error
+          }
+        }
+        
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+          });
+        }
       }
     });
   }
