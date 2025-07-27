@@ -194,7 +194,26 @@ class AccessibilitySettingsWidget extends ConsumerWidget {
       case ColorBlindnessType.tritanopia:
         return 'Tritanopia';
       case ColorBlindnessType.achromatopsia:
+        return 'Acromatopsia';
+      case ColorBlindnessType.daltonism:
+        return 'Daltonismo';
+    }
+  }
+  
+  String? _getColorBlindnessDescription(ColorBlindnessType type) {
+    switch (type) {
+      case ColorBlindnessType.none:
+        return 'Sin filtro de color';
+      case ColorBlindnessType.protanopia:
+        return 'Dificultad con el rojo';
+      case ColorBlindnessType.deuteranopia:
+        return 'Dificultad con el verde';
+      case ColorBlindnessType.tritanopia:
+        return 'Dificultad con el azul';
+      case ColorBlindnessType.achromatopsia:
         return 'Escala de grises';
+      case ColorBlindnessType.daltonism:
+        return 'Daltonismo (rojo-verde)';
     }
   }
 }

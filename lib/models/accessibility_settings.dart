@@ -9,7 +9,14 @@ import '../theme/theme.dart';
 part 'accessibility_settings.g.dart';
 
 enum FontSizeOption { small, medium, large }
-enum ColorBlindnessType { none, protanopia, deuteranopia, tritanopia, achromatopsia }
+enum ColorBlindnessType { 
+  none, 
+  protanopia, 
+  deuteranopia, 
+  tritanopia, 
+  achromatopsia,
+  daltonism 
+}
 
 @JsonSerializable()
 class AccessibilitySettings {

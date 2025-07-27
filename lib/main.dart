@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -171,6 +173,9 @@ class MyApp extends ConsumerWidget {
       textScaler: TextScaler.linear(accessibilitySettings.fontSizeScale),
     );
     
+    // Create a color filter for the entire app based on accessibility settings
+    final colorFilter = _createColorFilter(accessibilitySettings.colorBlindnessType);
+    
     return MaterialApp(
       title: 'Mood Notes',
       debugShowCheckedModeBanner: false,
@@ -180,7 +185,10 @@ class MyApp extends ConsumerWidget {
       builder: (context, child) {
         return MediaQuery(
           data: modifiedMediaQuery,
-          child: child!,
+          child: ColorFiltered(
+            colorFilter: colorFilter,
+            child: child!,
+          ),
         );
       },
       theme: ThemeData(
@@ -284,38 +292,137 @@ class MyApp extends ConsumerWidget {
   }
   
   static Color _adjustColorForAccessibility(Color color, ColorBlindnessType type) {
+    // Convert color to linear RGB (approximate sRGB to linear RGB)
+    double toLinear(double channel) {
+      channel = channel / 255.0;
+      return channel <= 0.04045 
+          ? channel / 12.92 
+          : pow((channel + 0.055) / 1.055, 2.4).toDouble();
+    }
+
+    // Convert linear RGB to sRGB
+    double toSRGB(double channel) {
+      return channel <= 0.0031308
+          ? 12.92 * channel
+          : 1.055 * pow(channel, 1 / 2.4) - 0.055;
+    }
+
+    // Apply color transformation matrix
+    List<double> applyColorMatrix(List<double> rgb, List<List<double>> matrix) {
+      return [
+        rgb[0] * matrix[0][0] + rgb[1] * matrix[0][1] + rgb[2] * matrix[0][2],
+        rgb[0] * matrix[1][0] + rgb[1] * matrix[1][1] + rgb[2] * matrix[1][2],
+        rgb[0] * matrix[2][0] + rgb[1] * matrix[2][1] + rgb[2] * matrix[2][2],
+      ];
+    }
+
+    // Convert color to linear RGB
+    final r = toLinear(color.r.toDouble());
+    final g = toLinear(color.g.toDouble());
+    final b = toLinear(color.b.toDouble());
+    final a = color.alpha / 255.0;
+
+    List<double> result = [r, g, b];
+
     switch (type) {
       case ColorBlindnessType.protanopia:
-        // Adjust for red-blindness
-        return Color.fromARGB(
-          color.alpha,
-          (color.red * 0.8).round(),
-          (color.green * 1.2).clamp(0, 255).round(),
-          (color.blue * 1.2).clamp(0, 255).round(),
-        );
+        // Simulate red-blindness (protanopia)
+        result = applyColorMatrix([r, g, b], [
+          [0.567, 0.433, 0.0],
+          [0.558, 0.442, 0.0],
+          [0.0, 0.242, 0.758]
+        ]);
+        break;
+        
       case ColorBlindnessType.deuteranopia:
-        // Adjust for green-blindness
-        return Color.fromARGB(
-          color.alpha,
-          (color.red * 1.2).clamp(0, 255).round(),
-          (color.green * 0.8).round(),
-          (color.blue * 1.2).clamp(0, 255).round(),
-        );
+        // Simulate green-blindness (deuteranopia)
+        result = applyColorMatrix([r, g, b], [
+          [0.625, 0.375, 0.0],
+          [0.7, 0.3, 0.0],
+          [0.0, 0.3, 0.7]
+        ]);
+        break;
+        
       case ColorBlindnessType.tritanopia:
-        // Adjust for blue-blindness
-        return Color.fromARGB(
-          color.alpha,
-          (color.red * 1.2).clamp(0, 255).round(),
-          (color.green * 1.2).clamp(0, 255).round(),
-          (color.blue * 0.8).round(),
-        );
+        // Simulate blue-blindness (tritanopia)
+        result = applyColorMatrix([r, g, b], [
+          [0.95, 0.05, 0.0],
+          [0.0, 0.433, 0.567],
+          [0.0, 0.475, 0.525]
+        ]);
+        break;
+        
       case ColorBlindnessType.achromatopsia:
-        // Convert to grayscale
-        final grayValue = (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue).round();
-        return Color.fromARGB(color.alpha, grayValue, grayValue, grayValue);
+        // Convert to grayscale using perceptual luminance
+        final luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        result = [luminance, luminance, luminance];
+        break;
+        
       case ColorBlindnessType.none:
       default:
         return color;
+    }
+
+    // Convert back to sRGB and ensure values are in valid range
+    int toChannel(double value) {
+      final srgb = toSRGB(value);
+      return (srgb * 255).clamp(0, 255).round();
+    }
+
+    return Color.fromARGB(
+      color.alpha,
+      toChannel(result[0]),
+      toChannel(result[1]),
+      toChannel(result[2]),
+    );
+  }
+  
+  static ColorFilter _createColorFilter(ColorBlindnessType type) {
+    switch (type) {
+      case ColorBlindnessType.protanopia:
+        return const ColorFilter.matrix([
+          0.567, 0.433, 0, 0, 0,
+          0.558, 0.442, 0, 0, 0,
+          0, 0.242, 0.758, 0, 0,
+          0, 0, 0, 1, 0,
+        ]);
+      case ColorBlindnessType.deuteranopia:
+        return const ColorFilter.matrix([
+          0.625, 0.375, 0, 0, 0,
+          0.7, 0.3, 0, 0, 0,
+          0, 0.3, 0.7, 0, 0,
+          0, 0, 0, 1, 0,
+        ]);
+      case ColorBlindnessType.tritanopia:
+        return const ColorFilter.matrix([
+          0.95, 0.05, 0, 0, 0,
+          0, 0.433, 0.567, 0, 0,
+          0, 0.475, 0.525, 0, 0,
+          0, 0, 0, 1, 0,
+        ]);
+      case ColorBlindnessType.achromatopsia:
+        return const ColorFilter.matrix([
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0, 0, 0, 1, 0,
+        ]);
+      case ColorBlindnessType.daltonism:
+        // Daltonism filter - a moderate red-green color deficiency simulation
+        return const ColorFilter.matrix([
+          0.8, 0.2, 0, 0, 0,
+          0.258, 0.742, 0, 0, 0,
+          0, 0.142, 0.858, 0, 0,
+          0, 0, 0, 1, 0,
+        ]);
+      case ColorBlindnessType.none:
+      default:
+        return const ColorFilter.matrix([
+          1, 0, 0, 0, 0,
+          0, 1, 0, 0, 0,
+          0, 0, 1, 0, 0,
+          0, 0, 0, 1, 0,
+        ]);
     }
   }
 }

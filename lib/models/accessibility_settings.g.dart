@@ -47,4 +47,5 @@ const _$ColorBlindnessTypeEnumMap = {
   ColorBlindnessType.deuteranopia: 'deuteranopia',
   ColorBlindnessType.tritanopia: 'tritanopia',
   ColorBlindnessType.achromatopsia: 'achromatopsia',
+  ColorBlindnessType.daltonism: 'daltonism',
 };
