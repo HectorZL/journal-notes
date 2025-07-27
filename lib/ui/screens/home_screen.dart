@@ -263,7 +263,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis emociones'),
+        title: const Text('MIS EMOCIONES', style: TextStyle(letterSpacing: 1.0, fontWeight: FontWeight.bold)),
         actions: [
           // Show delete button only if we have notes
           Builder(
@@ -273,7 +273,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                     ? IconButton(
                         icon: const Icon(Icons.delete_outline),
                         onPressed: _showClearConfirmation,
-                        tooltip: 'Limpiar todo',
+                        tooltip: 'LIMPIAR TODO',
                       )
                     : const SizedBox.shrink(),
                 loading: () => const SizedBox.shrink(),
@@ -325,18 +325,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        '¡Agrega tu primera emoción del día!',
+                                        '¡AGREGA TU PRIMERA EMOCIÓN DEL DÍA!',
                                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                           color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.0,
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Toca el botón + para comenzar',
+                                        'TOCA EL BOTÓN + PARA COMENZAR',
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(179), 
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(200),
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: 0.5,
                                         ),
                                       ),
                                     ],
@@ -375,7 +378,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Todas las notas han sido eliminadas')),
+            const SnackBar(content: Text('TODAS LAS NOTAS HAN SIDO ELIMINADAS', style: TextStyle(letterSpacing: 0.5))),
           );
         }
       }
@@ -383,7 +386,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       debugPrint('Error clearing notes: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al eliminar las notas')),
+          const SnackBar(content: Text('ERROR AL ELIMINAR LAS NOTAS', style: TextStyle(letterSpacing: 0.5))),
         );
       }
     } finally {
@@ -398,11 +401,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   // Get mood description based on index
   String _getMoodDescription(int moodIndex) {
     const moodDescriptions = [
-      'Feliz',
-      'Contento',
-      'Neutral',
-      'Triste',
-      'Muy triste',
+      'FELIZ',
+      'CONTENTO',
+      'NEUTRAL',
+      'TRISTE',
+      'MUY TRISTE',
     ];
     return moodDescriptions[moodIndex];
   }
@@ -415,19 +418,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Eliminar todas las notas'),
-        content: const Text('¿Estás seguro de que deseas eliminar todas las notas? Esta acción no se puede deshacer.'),
+        title: const Text('ELIMINAR TODAS LAS NOTAS', style: TextStyle(letterSpacing: 0.5, fontWeight: FontWeight.bold)),
+        content: const Text('¿ESTÁS SEGURO DE QUE DESEAS ELIMINAR TODAS LAS NOTAS? ESTA ACCIÓN NO SE PUEDE DESHACER.', 
+          style: TextStyle(letterSpacing: 0.3),
+          textAlign: TextAlign.center,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
+            child: const Text('CANCELAR', style: TextStyle(letterSpacing: 0.5)),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               _handleClearNotes();
             },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            child: const Text('ELIMINAR', style: TextStyle(color: Colors.red, letterSpacing: 0.5, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

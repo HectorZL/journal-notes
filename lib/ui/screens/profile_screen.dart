@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
 import '../widgets/base_screen.dart';
+import '../widgets/accessibility_settings_widget.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -118,6 +119,45 @@ class ProfileScreen extends ConsumerWidget {
                     },
                   ),
                 ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Accessibility Section
+            Text(
+              'Accesibilidad',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Configuración de accesibilidad',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Personaliza la apariencia de la aplicación según tus preferencias y necesidades de accesibilidad.',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const AccessibilitySettingsWidget(showTitle: false),
+                  ],
+                ),
               ),
             ),
             

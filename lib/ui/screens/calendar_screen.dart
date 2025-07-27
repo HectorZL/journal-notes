@@ -49,7 +49,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calendario de Estados de Ánimo'),
+        title: const Text('CALENDARIO DE ESTADOS DE ÁNIMO', 
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.0,
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -139,8 +145,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   Icon(Icons.calendar_today, size: 48, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
-                    'No hay notas para esta fecha',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    'NO HAY NOTAS PARA ESTA FECHA',
+                    style: TextStyle(
+                      fontSize: 16, 
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -164,7 +175,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Cargando notas...'),
+              const Text('CARGANDO NOTAS...', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ],
           ),
         ),
@@ -178,9 +194,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               children: [
                 const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 16),
-                const Text(
-                  'Error al cargar las notas',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  'ERROR AL CARGAR LAS NOTAS',
+                  style: TextStyle(
+                    fontSize: 18, 
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -193,7 +213,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 ElevatedButton.icon(
                   onPressed: () => ref.invalidate(notesProvider),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
+                  label: const Text('REINTENTAR', 
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
@@ -211,7 +236,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   Widget _buildNoteCard(Note note) {
     final moodEmojis = ['😄', '🙂', '😐', '🙁', '😞'];
-    final moodDescriptions = ['Excelente', 'Bien', 'Neutral', 'No muy bien', 'Mal'];
+    final moodDescriptions = ['EXCELENTE', 'BIEN', 'NEUTRAL', 'NO MUY BIEN', 'MAL'];
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -219,21 +244,26 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         leading: CircleAvatar(
           backgroundColor: _getMoodColor(note.moodIndex).withValues(alpha: 51),
           child: Text(
-            moodEmojis[note.moodIndex],
+            moodEmojis[note.moodIndex].toUpperCase(),
             style: const TextStyle(fontSize: 20),
           ),
         ),
         title: Text(
-          moodDescriptions[note.moodIndex],
-          style: Theme.of(context).textTheme.titleMedium,
+          moodDescriptions[note.moodIndex].toUpperCase(),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
         ),
         subtitle: note.content.isNotEmpty
-            ? Text(note.content)
+            ? Text(note.content.toUpperCase())
             : Text(
-                'Sin descripción',
+                'SIN DESCRIPCIÓN'.toUpperCase(),
                 style: TextStyle(
                   fontStyle: FontStyle.italic,
                   color: Theme.of(context).hintColor,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.3,
                 ),
               ),
         trailing: Text(
@@ -254,8 +284,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Detalles de la nota',
-                        style: Theme.of(context).textTheme.titleLarge,
+                        'DETALLES DE LA NOTA',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
@@ -265,22 +298,31 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Estado de ánimo: ${['Excelente', 'Bien', 'Neutral', 'No muy bien', 'Mal'][note.moodIndex]}',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    'ESTADO DE ÁNIMO: ${['EXCELENTE', 'BIEN', 'NEUTRAL', 'NO MUY BIEN', 'MAL'][note.moodIndex].toUpperCase()}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Hora: ${DateFormat('HH:mm').format(note.date)}',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    'HORA: ${DateFormat('HH:mm').format(note.date).toUpperCase()}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   if (note.content.isNotEmpty) ...[
                     Text(
-                      'Nota:',
-                      style: Theme.of(context).textTheme.titleSmall,
+                      'NOTA:',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    Text(note.content),
+                    Text(note.content.toUpperCase(), style: const TextStyle(letterSpacing: 0.3)),
                     const SizedBox(height: 16),
                   ],
                   const SizedBox(height: 8),
@@ -308,7 +350,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           children: [
                             Icon(Icons.edit, size: 20),
                             SizedBox(width: 4),
-                            Text('Editar'),
+                            Text('EDITAR', 
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -321,12 +368,28 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             context: context,
                             builder: (BuildContext context) {
                               return AlertDialog(
-                                title: const Text('Eliminar nota'),
-                                content: const Text('¿Estás seguro de que quieres eliminar esta nota?'),
+                                title: Text('ELIMINAR NOTA'.toUpperCase(), 
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                content: Text('¿ESTÁS SEGURO DE QUE QUIERES ELIMINAR ESTA NOTA?'.toUpperCase(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 0.3,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
-                                    child: const Text('Cancelar'),
+                                    child: const Text('CANCELAR',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
                                   ),
                                   TextButton(
                                     onPressed: () async {
@@ -337,7 +400,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         if (mounted) {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             const SnackBar(
-                                              content: Text('Nota eliminada correctamente'),
+                                              content: Text('NOTA ELIMINADA CORRECTAMENTE',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
                                               duration: Duration(seconds: 2),
                                             ),
                                           );
@@ -346,7 +414,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         if (mounted) {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             SnackBar(
-                                              content: Text('Error al eliminar la nota: $e'),
+                                              content: Text('ERROR AL ELIMINAR LA NOTA: ${e.toString().toUpperCase()}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
                                               backgroundColor: Colors.red,
                                             ),
                                           );
@@ -356,7 +429,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                     style: TextButton.styleFrom(
                                       foregroundColor: Colors.red,
                                     ),
-                                    child: const Text('Eliminar'),
+                                    child: const Text('ELIMINAR',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               );

@@ -65,7 +65,7 @@ class _BaseScreenState extends ConsumerState<BaseScreen> {
             : null,
         body: _buildBody(),
         floatingActionButton: widget.floatingActionButton,
-        backgroundColor: colorScheme.background,
+        backgroundColor: colorScheme.surface,
       ),
     );
   }

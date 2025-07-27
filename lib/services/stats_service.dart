@@ -128,10 +128,20 @@ class StatsService {
   // Process notes per day data
   List<Map<String, dynamic>> _processNotesPerDay(List<Map<String, dynamic>> rawData) {
     return rawData.map((day) {
-      // Handle both String and DateTime date formats
-      final date = day['day'] is String 
-          ? DateTime.parse(day['day'] as String)
-          : (day['day'] as DateTime);
+      DateTime date;
+      if (day['day'] is String) {
+        // Handle both 'YYYY-MM-DD' and full ISO 8601 formats
+        final dateStr = day['day'] as String;
+        date = dateStr.contains('T') 
+            ? DateTime.parse(dateStr)  // Full ISO 8601
+            : DateTime.parse('${dateStr}T00:00:00');  // Just date part
+      } else if (day['day'] is int) {
+        // Handle timestamp if needed
+        date = DateTime.fromMillisecondsSinceEpoch(day['day'] as int);
+      } else {
+        date = day['day'] as DateTime;
+      }
+      
       return {
         'date': date,
         'count': day['count'] as int,

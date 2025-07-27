@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import 'data/database_helper.dart';
 import 'services/navigation_service.dart';
-import 'providers/auth_provider.dart';
+import 'providers/accessibility_provider.dart';
+import 'models/accessibility_settings.dart';
+import 'theme/theme.dart';
 
 // Global error widget builder
 Widget errorWidgetBuilder(FlutterErrorDetails errorDetails) {
@@ -59,7 +60,8 @@ Future<void> main() async {
   // Set up error handlers
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
-    debugPrint(details.toString());  };
+    debugPrint(details.toString());  
+  };
   
   // Set up error widget builder
   ErrorWidget.builder = errorWidgetBuilder;
@@ -159,22 +161,41 @@ class MyApp extends ConsumerWidget {
   
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Get navigation service from provider
+    // Watch for changes in accessibility settings
+    final accessibilitySettings = ref.watch(accessibilityProvider);
     final navService = ref.read(navigationServiceProvider);
+    
+    // Apply text scaling based on user preference
+    final mediaQuery = MediaQuery.of(context);
+    final modifiedMediaQuery = mediaQuery.copyWith(
+      textScaler: TextScaler.linear(accessibilitySettings.fontSizeScale),
+    );
     
     return MaterialApp(
       title: 'Mood Notes',
       debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.system,
+      themeMode: _getThemeMode(accessibilitySettings.themeMode, mediaQuery.platformBrightness),
       initialRoute: navService.getInitialRoute(),
       onGenerateRoute: (settings) => navService.generateRoute(settings),
+      builder: (context, child) {
+        return MediaQuery(
+          data: modifiedMediaQuery,
+          child: child!,
+        );
+      },
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6750A4), // Primary color
+          seedColor: accessibilitySettings.selectedColor,
           brightness: Brightness.light,
-          secondary: const Color(0xFF625B71), // Secondary color
-          tertiary: const Color(0xFF7D5260), // Tertiary color
+          secondary: _adjustColorForAccessibility(
+            accessibilitySettings.selectedColor.withOpacity(0.7),
+            accessibilitySettings.colorBlindnessType,
+          ),
+          tertiary: _adjustColorForAccessibility(
+            accessibilitySettings.selectedColor.withOpacity(0.5),
+            accessibilitySettings.colorBlindnessType,
+          ),
         ),
         appBarTheme: const AppBarTheme(
           centerTitle: true,
@@ -219,15 +240,20 @@ class MyApp extends ConsumerWidget {
             borderRadius: BorderRadius.circular(8),
           ),
         ),
-        // Add more theme configurations as needed
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFD0BCFF), // Primary color for dark theme
+          seedColor: _lighten(accessibilitySettings.selectedColor, 0.2),
           brightness: Brightness.dark,
-          secondary: const Color(0xFFCCC2DC), // Secondary color for dark theme
-          tertiary: const Color(0xFFEFB8C8), // Tertiary color for dark theme
+          secondary: _adjustColorForAccessibility(
+            _lighten(accessibilitySettings.selectedColor, 0.4),
+            accessibilitySettings.colorBlindnessType,
+          ),
+          tertiary: _adjustColorForAccessibility(
+            _lighten(accessibilitySettings.selectedColor, 0.6),
+            accessibilitySettings.colorBlindnessType,
+          ),
         ),
         cardTheme: CardTheme(
           elevation: 2,
@@ -235,8 +261,61 @@ class MyApp extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        // Add more dark theme configurations as needed
       ),
     );
+  }
+  
+  static ThemeMode _getThemeMode(ThemeModeOption option, Brightness platformBrightness) {
+    switch (option) {
+      case ThemeModeOption.light:
+        return ThemeMode.light;
+      case ThemeModeOption.dark:
+        return ThemeMode.dark;
+      case ThemeModeOption.system:
+      default:
+        return ThemeMode.system;
+    }
+  }
+  
+  static Color _lighten(Color color, double amount) {
+    assert(amount >= 0 && amount <= 1);
+    final hsl = HSLColor.fromColor(color);
+    return hsl.withLightness((hsl.lightness + amount).clamp(0.0, 1.0)).toColor();
+  }
+  
+  static Color _adjustColorForAccessibility(Color color, ColorBlindnessType type) {
+    switch (type) {
+      case ColorBlindnessType.protanopia:
+        // Adjust for red-blindness
+        return Color.fromARGB(
+          color.alpha,
+          (color.red * 0.8).round(),
+          (color.green * 1.2).clamp(0, 255).round(),
+          (color.blue * 1.2).clamp(0, 255).round(),
+        );
+      case ColorBlindnessType.deuteranopia:
+        // Adjust for green-blindness
+        return Color.fromARGB(
+          color.alpha,
+          (color.red * 1.2).clamp(0, 255).round(),
+          (color.green * 0.8).round(),
+          (color.blue * 1.2).clamp(0, 255).round(),
+        );
+      case ColorBlindnessType.tritanopia:
+        // Adjust for blue-blindness
+        return Color.fromARGB(
+          color.alpha,
+          (color.red * 1.2).clamp(0, 255).round(),
+          (color.green * 1.2).clamp(0, 255).round(),
+          (color.blue * 0.8).round(),
+        );
+      case ColorBlindnessType.achromatopsia:
+        // Convert to grayscale
+        final grayValue = (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue).round();
+        return Color.fromARGB(color.alpha, grayValue, grayValue, grayValue);
+      case ColorBlindnessType.none:
+      default:
+        return color;
+    }
   }
 }

@@ -113,7 +113,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
   
   // Get mood description in Spanish
   String _getMoodDescription(int moodIndex) {
-    const descriptions = ['Feliz', 'Contento', 'Neutral', 'Triste', 'Muy triste'];
+    const descriptions = ['FELIZ', 'CONTENTO', 'NEUTRAL', 'TRISTE', 'MUY TRISTE'];
     return descriptions[moodIndex];
   }
   
@@ -150,8 +150,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Text(
-              _errorMessage ?? 'Error desconocido',
-              style: const TextStyle(fontSize: 16, color: Colors.red),
+              (_errorMessage ?? 'ERROR DESCONOCIDO').toUpperCase(),
+              style: const TextStyle(
+                fontSize: 16, 
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -159,7 +163,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
           ElevatedButton.icon(
             onPressed: _refreshData,
             icon: const Icon(Icons.refresh),
-            label: const Text('Reintentar'),
+            label: const Text('REINTENTAR', style: TextStyle(letterSpacing: 1.0)),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
@@ -260,7 +264,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
     
     // Update with actual data
     for (final dayData in notesPerDay) {
-      final date = DateTime.parse(dayData['date']);
+      final date = dayData['date'] is String 
+          ? DateTime.parse(dayData['date'] as String)
+          : dayData['date'] as DateTime;
       final dayName = weekdays[date.weekday - 1];
       
       // Find the most common mood for this day
@@ -300,9 +306,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Esta semana',
+                    'ESTA SEMANA',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
                     ),
                   ),
                   IconButton(
@@ -388,16 +395,20 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
           ),
           const SizedBox(height: 16),
           Text(
-            'No hay datos para mostrar',
+            'NO HAY DATOS PARA MOSTRAR',
+            textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.0,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Añade notas para ver tus estadísticas',
+            'AÑADE NOTAS PARA VER TUS ESTADÍSTICAS',
+            textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 16),

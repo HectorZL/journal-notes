@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notas_animo/providers/accessibility_provider.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../widgets/base_screen.dart';
+import '../../../models/accessibility_settings.dart';
+import '../../widgets/accessibility_settings_widget.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -24,6 +27,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String? _errorMessage;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _showAccessibilitySettings = false;
 
   @override
   void dispose() {
@@ -60,6 +64,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
 
       if (result['success'] == true && mounted) {
+        // Save accessibility settings
+        final notifier = ref.read(accessibilityProvider.notifier);
+        await notifier.updateSettings(ref.read(accessibilityProvider));
+        
         final navService = ref.read(navigationServiceProvider);
         navService.navigateToHome(context);
       } else {
@@ -162,7 +170,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                  fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -196,7 +204,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                  fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -240,7 +248,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                  fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -284,7 +292,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: colorScheme.surfaceVariant.withOpacity(0.5),
+                  fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -298,8 +306,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 },
               ),
               
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
+              // Toggle for accessibility settings
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _showAccessibilitySettings = !_showAccessibilitySettings;
+                  });
+                },
+                icon: Icon(
+                  _showAccessibilitySettings 
+                      ? Icons.arrow_drop_up 
+                      : Icons.arrow_drop_down,
+                ),
+                label: const Text('Preferencias de accesibilidad'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+              
+              // Accessibility settings
+              if (_showAccessibilitySettings) ...[
+                const SizedBox(height: 16),
+                const AccessibilitySettingsWidget(showTitle: false),
+                const SizedBox(height: 16),
+              ],
+              
               // Register button
               FilledButton(
                 onPressed: _isLoading ? null : _register,
