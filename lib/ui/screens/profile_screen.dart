@@ -4,6 +4,8 @@ import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/accessibility_settings_widget.dart';
+import 'profile/edit_profile_screen.dart';
+import 'profile/change_password_screen.dart';  // Adjust the import path as needed
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -105,8 +107,23 @@ class ProfileScreen extends ConsumerWidget {
                     leading: const Icon(Icons.edit_outlined),
                     title: const Text('Editar perfil'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // TODO: Implement edit profile
+                    onTap: () async {
+                      final result = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ),
+                      );
+                      
+                      if (result == true && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Perfil actualizado correctamente'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        ref.invalidate(authServiceProvider);
+                      }
                     },
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
@@ -114,8 +131,22 @@ class ProfileScreen extends ConsumerWidget {
                     leading: const Icon(Icons.lock_outline),
                     title: const Text('Cambiar contraseña'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // TODO: Implement change password
+                    onTap: () async {
+                      final result = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChangePasswordScreen(),
+                        ),
+                      );
+                      
+                      if (result == true && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Contraseña actualizada correctamente'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
                     },
                   ),
                 ],
