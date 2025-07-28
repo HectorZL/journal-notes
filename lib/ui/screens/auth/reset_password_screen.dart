@@ -155,6 +155,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
                 style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface,
                   fontSize: 20,
                   letterSpacing: 4,
                   fontWeight: FontWeight.bold,
@@ -164,6 +165,15 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 decoration: InputDecoration(
                   labelText: 'Código de verificación',
                   hintText: '1111',
+                  hintStyle: GoogleFonts.poppins(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                    fontSize: 20,
+                    letterSpacing: 4,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  labelStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   counterText: '',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -173,8 +183,15 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -199,11 +216,22 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 focusNode: _passwordFocusNode,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.next,
-                style: GoogleFonts.poppins(),
+                style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Nueva contraseña',
                   hintText: 'Ingresa tu nueva contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  hintStyle: GoogleFonts.poppins(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  labelStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.lock_outline,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -223,8 +251,15 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -249,11 +284,22 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 focusNode: _confirmPasswordFocusNode,
                 obscureText: _obscureConfirmPassword,
                 textInputAction: TextInputAction.done,
-                style: GoogleFonts.poppins(),
+                style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Confirmar contraseña',
                   hintText: 'Confirma tu nueva contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  hintStyle: GoogleFonts.poppins(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  labelStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.lock_outline,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
@@ -273,8 +319,15 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -289,6 +342,38 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 onFieldSubmitted: (_) {
                   _resetPassword();
                 },
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Password Requirements
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Requisitos de contraseña:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '• Al menos 6 caracteres\n• No uses información personal\n• Usa una combinación de letras y números',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               
               const SizedBox(height: 24),

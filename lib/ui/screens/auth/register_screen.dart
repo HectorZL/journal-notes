@@ -155,11 +155,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               TextFormField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
-                style: GoogleFonts.poppins(),
+                style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Nombre completo',
                   hintText: 'Tu nombre completo',
-                  prefixIcon: const Icon(Icons.person_outline_rounded),
+                  hintStyle: GoogleFonts.poppins(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  labelStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.person_outline_rounded,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
@@ -168,8 +179,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -189,11 +207,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                style: GoogleFonts.poppins(),
+                style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Correo electrónico',
                   hintText: 'tucorreo@ejemplo.com',
-                  prefixIcon: const Icon(Icons.email_outlined),
+                  hintStyle: GoogleFonts.poppins(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  labelStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.email_outlined,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
@@ -202,8 +231,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -223,16 +259,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               TextFormField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
-                style: GoogleFonts.poppins(),
+                style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Contraseña',
                   hintText: '••••••••',
-                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  hintStyle: GoogleFonts.poppins(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  labelStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.lock_outline_rounded,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                     onPressed: () {
                       setState(() => _obscurePassword = !_obscurePassword);
@@ -246,8 +294,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -267,16 +322,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirmPassword,
-                style: GoogleFonts.poppins(),
+                style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Confirmar contraseña',
                   hintText: '••••••••',
-                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  hintStyle: GoogleFonts.poppins(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  labelStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.lock_outline_rounded,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureConfirmPassword
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                     onPressed: () {
                       setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
@@ -290,8 +357,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
