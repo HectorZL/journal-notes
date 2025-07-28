@@ -99,20 +99,16 @@ class MoodShelf extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            sphere.color.withAlpha(230), // 0.9 * 255 ≈ 230
-            HSLColor.fromColor(sphere.color).withLightness(0.6).toColor(),
+            sphere.color.withAlpha(255), // Full opacity
+            HSLColor.fromColor(sphere.color).withLightness(0.7).toColor(),
           ],
         ),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: sphere.color.withAlpha(230), // 0.9 * 255 ≈ 230
-          width: 1.5,
-        ),
         boxShadow: [
           BoxShadow(
-            color: sphere.color.withAlpha(128), // 0.5 * 255 ≈ 128
+            color: Colors.black.withAlpha(26),
             blurRadius: 8,
-            spreadRadius: 2,
+            spreadRadius: 0,
             offset: const Offset(0, 2),
           ),
         ],

@@ -167,11 +167,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                style: GoogleFonts.poppins(),
+                style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Correo electrónico',
                   hintText: 'tucorreo@ejemplo.com',
-                  prefixIcon: const Icon(Icons.email_outlined),
+                  hintStyle: GoogleFonts.poppins(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  labelStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.email_outlined,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
@@ -180,8 +191,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -202,11 +220,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.done,
-                style: GoogleFonts.poppins(),
+                style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Contraseña',
                   hintText: 'Ingresa tu contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  hintStyle: GoogleFonts.poppins(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  labelStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.lock_outline,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -226,8 +255,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  fillColor: colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -274,7 +310,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 0,
+                  elevation: 2,
+                  shadowColor: colorScheme.shadow.withOpacity(0.3),
                 ),
                 child: _isLoading
                     ? const SizedBox(
