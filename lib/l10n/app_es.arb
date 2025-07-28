@@ -1,0 +1,7 @@
+{
+  "@@locale": "es",
+  "appTitle": "Notas de Ánimo",
+  "@appTitle": {
+    "description": "The title of the application"
+  }
+}

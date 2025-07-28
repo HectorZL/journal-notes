@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "errorOccurred": "An error occurred",
+  "@errorOccurred": {
+    "description": "Error message shown when an unexpected error occurs"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Text for retry button in error dialog"
+  }
+}

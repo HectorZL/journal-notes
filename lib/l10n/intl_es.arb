@@ -1,0 +1,11 @@
+{
+  "@@locale": "es",
+  "errorOccurred": "Ocurrió un error",
+  "@errorOccurred": {
+    "description": "Mensaje de error"
+  },
+  "retry": "Reintentar",
+  "@retry": {
+    "description": "Botón de reintentar"
+  }
+}

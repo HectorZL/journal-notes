@@ -37,8 +37,29 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
-}
 
-flutter {
-    source = "../.."
+    splits {
+        abi {
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86_64")
+            isUniversalApk = false
+        }
+    }
+
+    androidComponents {
+        onVariants { variant ->
+            variant.outputs.forEach { output ->
+                val abiBasedOutput = output as? com.android.build.api.variant.impl.VariantOutputImpl
+                if (abiBasedOutput != null) {
+                    abiBasedOutput.outputFileName.set(
+                        "${project.name}-${variant.name}-${abiBasedOutput.baseName}.apk"
+                    )
+                }
+            }
+        }
+    }
+
+    flutter {
+        source = "../.."
+    }
 }
