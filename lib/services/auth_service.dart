@@ -45,6 +45,24 @@ class AuthService {
     };
   }
   
+  // Check if email exists in the system
+  Future<bool> doesEmailExist(String email) async {
+    try {
+      // Query the database to check if email exists
+      final db = await _dbHelper.database;
+      final result = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: [email.toLowerCase()], // Case insensitive check
+      );
+      
+      return result.isNotEmpty;
+    } catch (e) {
+      debugPrint('Error checking if email exists: $e');
+      return false; // In case of error, default to false to prevent account enumeration
+    }
+  }
+  
   // Login user
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {

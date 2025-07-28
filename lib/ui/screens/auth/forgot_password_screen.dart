@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:notas_animo/services/auth_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../widgets/base_screen.dart';
 
@@ -32,22 +33,41 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Get the email and trim any whitespace
+      final email = _emailController.text.trim();
+      
+      // Get the auth service to check if email is registered
+      final authService = ref.read(authServiceProvider);
+      
+      // Check if email exists in the system
+      final emailExists = await authService.doesEmailExist(email);
+      
+      if (!mounted) return;
+      
+      if (!emailExists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Este correo no está registrado en nuestro sistema.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      
       // Simulate API call delay
       await Future.delayed(const Duration(milliseconds: 800));
-
-      if (!mounted) return;
       
       // Navigate to reset password screen with the email
       final navService = ref.read(navigationServiceProvider);
       navService.navigateToResetPassword(
         context,
-        _emailController.text.trim(),
+        email,
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error al enviar el código. Inténtalo de nuevo.'),
+            content: Text('Error al verificar el correo. Inténtalo de nuevo.'),
             backgroundColor: Colors.red,
           ),
         );
