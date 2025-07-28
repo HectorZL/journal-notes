@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:async';
@@ -107,20 +109,31 @@ class DatabaseHelper {
   }
   
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle database schema upgrades here
+    debugPrint('Upgrading database from version $oldVersion to $newVersion');
+    
     if (oldVersion < 2) {
-      // Add color column to notes table
-      await db.execute('ALTER TABLE $tableNotes ADD COLUMN color INTEGER DEFAULT 4278190080'); // Default to blue color
+      // Add any necessary migrations for version 2
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_user_date ON $tableNotes($columnUserId, $columnDate)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_date ON $tableNotes($columnDate)');
+      
+      // Migrate existing passwords to use salt
+      await migratePasswordsToUseSalt();
     }
+    
+    // Add more version-specific migrations here as needed
+    
+    debugPrint('Database upgrade completed');
   }
 
   Future<void> _onCreate(Database db, int version) async {
+    debugPrint('Creating database tables');
+    
     // Create users table
     await db.execute('''
       CREATE TABLE $tableUsers (
         $columnId INTEGER PRIMARY KEY AUTOINCREMENT,
         $columnName TEXT NOT NULL,
-        $columnEmail TEXT NOT NULL UNIQUE,
+        $columnEmail TEXT UNIQUE NOT NULL,
         $columnPassword TEXT NOT NULL,
         $columnCreatedAt TEXT NOT NULL
       )
@@ -132,13 +145,18 @@ class DatabaseHelper {
         $columnNoteId INTEGER PRIMARY KEY AUTOINCREMENT,
         $columnUserId INTEGER NOT NULL,
         $columnMoodIndex INTEGER NOT NULL,
-        $columnContent TEXT,
+        $columnContent TEXT NOT NULL,
         $columnDate TEXT NOT NULL,
         $columnTags TEXT,
-        color INTEGER DEFAULT 4278190080,
         FOREIGN KEY ($columnUserId) REFERENCES $tableUsers ($columnId) ON DELETE CASCADE
       )
     ''');
+    
+    // Create indexes
+    await db.execute('CREATE INDEX idx_notes_user_date ON $tableNotes($columnUserId, $columnDate)');
+    await db.execute('CREATE INDEX idx_notes_date ON $tableNotes($columnDate)');
+    
+    debugPrint('Database tables created successfully');
   }
 
   // User CRUD Operations
@@ -148,15 +166,14 @@ class DatabaseHelper {
         throw ArgumentError('Email and password are required');
       }
       
-      // Check if user already exists
-      final existingUser = await getUserByEmail(user[columnEmail]);
-      if (existingUser != null) {
-        throw Exception('User with this email already exists');
-      }
-      
       final db = await database;
-      // Hash password before storing
-      user[columnPassword] = _hashPassword(user[columnPassword]);
+      
+      // Generate a unique salt for this user
+      final salt = _generateSalt();
+      
+      // Hash password with the generated salt
+      user[columnPassword] = _hashPasswordWithSalt(user[columnPassword], salt);
+      
       user[columnCreatedAt] = DateTime.now().toIso8601String();
       
       return await db.insert(
@@ -211,19 +228,19 @@ class DatabaseHelper {
         return false;
       }
       
-      // Then validate password
-      final result = await db.query(
-        tableUsers,
-        columns: [columnId],
-        where: '$columnEmail = ? AND $columnPassword = ?',
-        whereArgs: [email, _hashPassword(password)],
-      );
-      
-      if (result.isEmpty) {
-        debugPrint('Invalid password for email: $email');
+      // Extract stored hash and salt
+      final storedPassword = user.first[columnPassword] as String?;
+      if (storedPassword == null) {
+        debugPrint('No password found for user');
+        return false;
       }
+      final hashAndSalt = _extractHashAndSalt(storedPassword);
       
-      return result.isNotEmpty;
+      // Hash provided password with the stored salt
+      final providedHash = _hashPasswordWithSalt(password, hashAndSalt['salt']!);
+      
+      // Compare the hashes
+      return providedHash == storedPassword;
     } catch (e, stackTrace) {
       debugPrint('Error validating user: $e');
       debugPrint('Stack trace: $stackTrace');
@@ -351,18 +368,68 @@ class DatabaseHelper {
     };
   }
 
-  // Helper method to hash passwords with salt
-  String _hashPassword(String password) {
+  // Migrate existing users to use password hashes with salt
+  Future<void> migratePasswordsToUseSalt() async {
     try {
-      // In a production app, you should use a unique salt per user
-      const salt = 'your_salt_here'; // Consider using a secure random salt
+      final db = await database;
+      final users = await db.query(tableUsers);
+      
+      for (var user in users) {
+        final password = user[columnPassword] as String?;
+        if (password != null && !password.contains(':')) {
+          debugPrint('Migrating password for user ID: ${user[columnId]}');
+          
+          // Generate a new salt and create the new hash
+          final salt = _generateSalt();
+          final newHash = _hashPasswordWithSalt(password, salt);
+          
+          // Update the user with the new hashed password
+          await db.update(
+            tableUsers,
+            {columnPassword: newHash},
+            where: '$columnId = ?',
+            whereArgs: [user[columnId]],
+          );
+          
+          debugPrint('Successfully migrated password for user ID: ${user[columnId]}');
+        }
+      }
+      
+      debugPrint('Password migration completed successfully');
+    } catch (e, stackTrace) {
+      debugPrint('Error during password migration: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  // Generate a unique salt for each user
+  String _generateSalt() {
+    final random = Random.secure();
+    final saltBytes = List<int>.generate(32, (_) => random.nextInt(256));
+    return base64Url.encode(saltBytes);
+  }
+
+  // Hash password with user-specific salt
+  String _hashPasswordWithSalt(String password, String salt) {
+    try {
       final key = utf8.encode(password + salt);
       final bytes = sha256.convert(key);
-      return bytes.toString();
+      return '${bytes.toString()}:$salt'; // Store hash and salt together
     } catch (e) {
       debugPrint('Error hashing password: $e');
       rethrow;
     }
+  }
+
+  // Extract hash and salt from stored value
+  Map<String, String> _extractHashAndSalt(String storedPassword) {
+    final parts = storedPassword.split(':');
+    if (parts.length != 2) {
+      // For backward compatibility with existing passwords
+      return {'hash': storedPassword, 'salt': ''};
+    }
+    return {'hash': parts[0], 'salt': parts[1]};
   }
 
   // Close the database connection

@@ -4,6 +4,7 @@ import 'package:notas_animo/data/database_helper.dart';
 import 'package:notas_animo/services/auth_service.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'dart:math';
 import '../../widgets/base_screen.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
@@ -31,14 +32,49 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     super.dispose();
   }
 
-  String _hashPassword(String password) {
-    var bytes = utf8.encode(password);
-    var digest = sha256.convert(bytes);
-    return digest.toString();
+  Map<String, String> _extractHashAndSalt(String storedPassword) {
+    final parts = storedPassword.split(':');
+    if (parts.length != 2) {
+      // For backward compatibility
+      return {'hash': storedPassword, 'salt': ''};
+    }
+    return {'hash': parts[0], 'salt': parts[1]};
+  }
+
+  String _hashPasswordWithSalt(String password, String salt) {
+    try {
+      final key = utf8.encode(password + salt);
+      final bytes = sha256.convert(key);
+      return '${bytes.toString()}:$salt';
+    } catch (e) {
+      debugPrint('Error hashing password: $e');
+      rethrow;
+    }
+  }
+
+  String _generateSalt() {
+    final random = Random.secure();
+    final saltBytes = List<int>.generate(32, (_) => random.nextInt(256));
+    return base64Url.encode(saltBytes);
   }
 
   Future<void> _changePassword() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Validar que las contraseñas coincidan
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Las contraseñas nuevas no coinciden'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -47,77 +83,95 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       final authService = ref.read(authServiceProvider);
       final currentUser = authService.currentUser;
       
-      if (currentUser != null) {
-        final db = await dbHelper.database;
-        
-        // Get the current user's data including the hashed password
-        final userData = await db.query(
-          DatabaseHelper.tableUsers,
-          where: 'id = ?',
-          whereArgs: [currentUser['id']],
-        );
+      if (currentUser == null) {
+        throw Exception('No se pudo obtener la información del usuario actual');
+      }
 
-        if (userData.isEmpty) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Usuario no encontrado'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
-        }
+      final db = await dbHelper.database;
+      
+      // Obtener los datos actuales del usuario
+      final userData = await db.query(
+        DatabaseHelper.tableUsers,
+        where: 'id = ?',
+        whereArgs: [currentUser['id']],
+      );
 
-        // Verify current password by comparing hashes
-        final storedHash = userData.first['password'] as String;
-        final inputHash = _hashPassword(_currentPasswordController.text);
+      if (userData.isEmpty) {
+        throw Exception('Usuario no encontrado en la base de datos');
+      }
 
-        if (storedHash != inputHash) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('La contraseña actual es incorrecta'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
-        }
+      // Obtener la contraseña almacenada y extraer el salt
+      final storedPassword = userData.first['password'] as String?;
+      if (storedPassword == null) {
+        throw Exception('No se encontró una contraseña almacenada para este usuario');
+      }
 
-        // Update password with new hashed password
-        await db.update(
-          DatabaseHelper.tableUsers,
-          {
-            'password': _hashPassword(_newPasswordController.text),
-          },
-          where: 'id = ?',
-          whereArgs: [currentUser['id']],
-        );
+      // Extraer el hash y el salt almacenados
+      final storedData = _extractHashAndSalt(storedPassword);
+      final storedHash = storedData['hash']!;
+      final salt = storedData['salt']!;
 
+      // Hashear la contraseña actual proporcionada con el mismo salt
+      final currentPasswordHash = _hashPasswordWithSalt(
+        _currentPasswordController.text,
+        salt
+      ).split(':')[0]; // Solo necesitamos la parte del hash para comparar
+
+      // Verificar la contraseña actual
+      if (storedHash != currentPasswordHash) {
         if (mounted) {
-          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Contraseña actualizada correctamente'),
-              backgroundColor: Colors.green,
+              content: Text('La contraseña actual es incorrecta'),
+              backgroundColor: Colors.red,
             ),
           );
-          
-          // Clear the form
-          _currentPasswordController.clear();
-          _newPasswordController.clear();
-          _confirmPasswordController.clear();
-          
-          // Return to previous screen
-          Navigator.of(context).pop(true);
         }
+        return;
+      }
+
+      // Generar un nuevo salt para la nueva contraseña
+      final newSalt = _generateSalt();
+      final newHashedPassword = _hashPasswordWithSalt(
+        _newPasswordController.text,
+        newSalt
+      );
+
+      // Actualizar la contraseña con el nuevo hash y salt
+      final updatedRows = await db.update(
+        DatabaseHelper.tableUsers,
+        {'password': newHashedPassword},
+        where: 'id = ?',
+        whereArgs: [currentUser['id']],
+      );
+
+      if (updatedRows == 0) {
+        throw Exception('No se pudo actualizar la contraseña');
+      }
+
+      if (mounted) {
+        // Mostrar mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contraseña actualizada correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Limpiar el formulario
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+        
+        // Regresar a la pantalla anterior
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
+      debugPrint('Error al cambiar la contraseña: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cambiar la contraseña: $e'),
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
