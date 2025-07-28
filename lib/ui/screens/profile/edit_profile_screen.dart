@@ -66,15 +66,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final currentUser = authService.currentUser;
       
       if (currentUser != null) {
-        final db = await dbHelper.database;
-        await db.update(
-          DatabaseHelper.tableUsers,
-          {
-            'name': _nameController.text.trim(),
-            'email': _emailController.text.trim(),
-          },
-          where: 'id = ?',
-          whereArgs: [currentUser['id']],
+        final userId = int.tryParse(currentUser['id'].toString());
+        if (userId == null) throw Exception('ID de usuario no válido');
+        
+        // Update the user in the database
+        await dbHelper.updateUser(
+          userId,
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
         );
 
         // Update the current user in the auth service
@@ -90,7 +89,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar los cambios: $e')),
+          SnackBar(content: Text('Error al guardar los cambios: ${e.toString()}')),
         );
       }
     } finally {

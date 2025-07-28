@@ -262,6 +262,35 @@ class DatabaseHelper {
     }
   }
 
+  Future<int> updateUser(int userId, {String? name, String? email}) async {
+    try {
+      final db = await database;
+      final data = <String, dynamic>{};
+      
+      if (name != null) data[columnName] = name;
+      if (email != null) {
+        // Check if email is already in use by another user
+        final existingUser = await getUserByEmail(email);
+        if (existingUser != null && existingUser[columnId] != userId) {
+          throw Exception('El correo electrónico ya está en uso por otra cuenta');
+        }
+        data[columnEmail] = email;
+      }
+      
+      if (data.isEmpty) return 0; // No updates needed
+      
+      return await db.update(
+        tableUsers,
+        data,
+        where: '$columnId = ?',
+        whereArgs: [userId],
+      );
+    } catch (e) {
+      debugPrint('Error updating user: $e');
+      rethrow;
+    }
+  }
+
   // Notes CRUD Operations
   Future<int> insertNote(Map<String, dynamic> note) async {
     try {
