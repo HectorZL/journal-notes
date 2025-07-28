@@ -302,9 +302,57 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
 
     if (confirmed == true && mounted) {
       try {
-        await ref.read(notesProvider.notifier).deleteNote(widget.noteToEdit!);
+        await ref.read(notesProvider.notifier).deleteNote(widget.noteToEdit!.id!);
         if (mounted) {
-          Navigator.of(context).pop(true); // Return true to indicate note was deleted
+          // Show snackbar with undo option
+          final messenger = ScaffoldMessenger.of(context);
+          messenger.clearSnackBars(); // Clear any existing snackbars
+          
+          messenger.showSnackBar(
+            SnackBar(
+              content: const Text('Nota eliminada'),
+              action: SnackBarAction(
+                label: 'DESHACER',
+                textColor: Colors.yellow,
+                onPressed: () async {
+                  try {
+                    final success = await ref.read(notesProvider.notifier).undoLastDelete();
+                    if (success && mounted) {
+                      // Show confirmation that undo was successful
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Acción deshecha correctamente'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      // If we're still on this screen after undo, pop it
+                      if (mounted && Navigator.canPop(context)) {
+                        Navigator.of(context).pop(false);
+                      }
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Error al deshacer la acción'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+          
+          // Only pop the screen after showing the snackbar
+          Navigator.of(context).pop(true);
         }
       } catch (e) {
         if (mounted) {

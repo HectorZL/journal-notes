@@ -358,20 +358,56 @@ class DatabaseHelper {
     }
   }
 
-  Future<int> deleteNote(int id) async {
+  Future<int> deleteNote(int noteId) async {
     try {
-      if (id <= 0) {
-        throw ArgumentError('Invalid note ID');
+      final db = await database;
+      debugPrint('Deleting note with ID: $noteId');
+      final result = await db.delete(
+        tableNotes,
+        where: '$columnNoteId = ?',
+        whereArgs: [noteId],
+      );
+      debugPrint('Successfully deleted $result note(s)');
+      return result;
+    } catch (e) {
+      debugPrint('Error deleting note: $e');
+      rethrow;
+    }
+  }
+
+  Future<int> deleteNoteWithUserId(int id, {required int userId}) async {
+    try {
+      if (id <= 0 || userId <= 0) {
+        throw ArgumentError('Invalid note ID or user ID');
       }
       
       final db = await database;
       return await db.delete(
         tableNotes,
-        where: '$columnNoteId = ?',
-        whereArgs: [id],
+        where: '$columnNoteId = ? AND $columnUserId = ?',
+        whereArgs: [id, userId],
       );
     } catch (e) {
       debugPrint('Error deleting note: $e');
+      rethrow;
+    }
+  }
+
+  /// Deletes all notes for a specific user
+  Future<int> deleteAllNotesForUser(int userId) async {
+    try {
+      if (userId <= 0) {
+        throw ArgumentError('Invalid user ID');
+      }
+      
+      final db = await database;
+      return await db.delete(
+        tableNotes,
+        where: '$columnUserId = ?',
+        whereArgs: [userId],
+      );
+    } catch (e) {
+      debugPrint('Error deleting all notes for user: $e');
       rethrow;
     }
   }
@@ -473,6 +509,56 @@ class DatabaseHelper {
       return {'hash': storedPassword, 'salt': ''};
     }
     return {'hash': parts[0], 'salt': parts[1]};
+  }
+
+  // Verificar el estado de la base de datos
+  Future<Map<String, dynamic>> checkDatabaseStatus() async {
+    try {
+      final db = await database;
+      
+      // Verificar si la tabla de notas existe
+      final notesTable = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='$tableNotes'"
+      );
+      
+      // Verificar si la tabla de usuarios existe
+      final usersTable = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='$tableUsers'"
+      );
+      
+      // Verificar restricciones de clave foránea
+      final foreignKeys = await db.rawQuery('PRAGMA foreign_keys');
+      
+      // Obtener información de la base de datos
+      final dbInfo = await db.rawQuery('PRAGMA database_list');
+      
+      return {
+        'database_path': db.path,
+        'notes_table_exists': notesTable.isNotEmpty,
+        'users_table_exists': usersTable.isNotEmpty,
+        'foreign_keys_enabled': foreignKeys.first['foreign_keys'] == 1,
+        'database_info': dbInfo,
+        'is_database_open': db.isOpen,
+      };
+    } catch (e) {
+      debugPrint('Error al verificar el estado de la base de datos: $e');
+      rethrow;
+    }
+  }
+  
+  // Cerrar la base de datos correctamente
+  Future<void> closeDatabase() async {
+    try {
+      final db = await database;
+      if (db.isOpen) {
+        await db.close();
+        _database = null;
+        debugPrint('Base de datos cerrada correctamente');
+      }
+    } catch (e) {
+      debugPrint('Error al cerrar la base de datos: $e');
+      rethrow;
+    }
   }
 
   // Close the database connection

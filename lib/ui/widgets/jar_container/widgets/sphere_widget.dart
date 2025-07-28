@@ -18,20 +18,6 @@ class SphereWidget extends StatelessWidget {
         width: data.size * 1.2,
         height: data.size * 1.2,
         padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.yellow[100],
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 4,
-              offset: const Offset(2, 2),
-            ),
-          ],
-          border: Border.all(
-            color: Colors.yellow[300]!,
-            width: 1.0,
-          ),
-        ),
         child: Center(
           child: Text(
             data.emoji,

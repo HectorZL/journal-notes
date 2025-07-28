@@ -87,8 +87,8 @@ class LocalDatabase {
     return await dbHelper.updateNote(note);
   }
 
-  Future<int> deleteNote(int noteId) async {
-    return await dbHelper.deleteNote(noteId);
+  Future<int> deleteNote(int noteId, {required int userId}) async {
+    return await dbHelper.deleteNoteWithUserId(noteId, userId: userId);
   }
 
   // Statistics

@@ -37,14 +37,17 @@ class Note {
   // Create a Note from a database map
   factory Note.fromMap(Map<String, dynamic> map) {
     return Note(
-      id: map['note_id'],
       uuid: map['note_id']?.toString() ?? '',
-      userId: map['user_id'],
+      userId: map['user_id'] is int ? map['user_id'] : int.tryParse(map['user_id']?.toString() ?? '-1') ?? -1,
       content: map['content'] ?? '',
-      date: DateTime.parse(map['date'] ?? DateTime.now().toIso8601String()),
-      moodIndex: map['mood_index'] ?? 0,
+      date: map['date'] != null 
+          ? DateTime.parse(map['date']) 
+          : DateTime.now(),
+      moodIndex: map['mood_index'] is int ? map['mood_index'] : int.tryParse(map['mood_index']?.toString() ?? '0') ?? 0,
       tags: map['tags'],
-      color: map['color'] != null ? Color(map['color'] as int) : Colors.blue,
+      color: map['color'] != null 
+          ? Color(map['color'] is int ? map['color'] : int.tryParse(map['color'].toString()) ?? 0xFF0000FF)
+          : Colors.blue,
     );
   }
 

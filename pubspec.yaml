@@ -32,6 +32,25 @@ dev_dependencies:
     sdk: flutter
   build_runner: ^2.4.6
   json_serializable: ^6.7.1
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "lib/assets/icon/icon.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "lib/assets/icon/icon.png"
+  windows:
+    generate: true
+    image_path: "lib/assets/icon/icon.png"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "lib/assets/icon/icon.png"
 
 flutter:
   uses-material-design: true
+  assets:
+    - lib/assets/icon/

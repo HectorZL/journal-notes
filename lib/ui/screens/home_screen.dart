@@ -51,31 +51,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     )..repeat(reverse: true);
     
     // Initialize in the next frame
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (mounted) {
-        // Get the current user ID
-        final userId = ref.read(authProvider).userId;
-        
-        // If user is logged in, load their notes
-        if (userId != null) {
-          try {
-            final userIdInt = int.tryParse(userId);
-            if (userIdInt != null) {
-              await ref.read(notesProvider.notifier).loadNotes(userId: userIdInt);
-            }
-          } catch (e) {
-            debugPrint('Error loading notes: $e');
-            // Still set initialized to true to show the UI even if there's an error
-          }
-        }
-        
-        if (mounted) {
-          setState(() {
-            _isInitialized = true;
-          });
-        }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initialize());
+  }
+
+  Future<void> _initialize() async {
+    if (!mounted) return;
+    
+    try {
+      // Get the current auth state
+      final authState = ref.read(authProvider);
+      
+      // If user is logged in, load their notes
+      if (authState.isAuthenticated && authState.userIdAsInt != null) {
+        await ref.read(notesProvider.notifier).loadNotes(userId: authState.userIdAsInt);
+      } else {
+        debugPrint('User is not authenticated or has invalid user ID');
       }
-    });
+    } catch (e, stackTrace) {
+      debugPrint('Error initializing HomeScreen: $e\n$stackTrace');
+      // Still set initialized to true to show the UI even if there's an error
+    }
+    
+    if (mounted) {
+      setState(() {
+        _isInitialized = true;
+      });
+    }
   }
   
   @override
@@ -172,6 +173,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(),
                             child: const Text('Cerrar'),
+                          ),
+                          TextButton(
+                            onPressed: () => _handleDeleteNote(note),
+                            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
                           ),
                         ],
                       ),
@@ -286,7 +291,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                 data: (notes) => notes.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.delete_outline),
-                        onPressed: _showClearConfirmation,
+                        onPressed: _handleClearAllNotes,
                         tooltip: 'LIMPIAR TODO',
                       )
                     : const SizedBox.shrink(),
@@ -361,13 +366,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                                 ),
                               ],
                             ),
-                          ), // Added missing closing parenthesis for Container
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              // Removed add button as per requirements
-              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -375,40 +377,117 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     );
   }
   
-  Future<void> _handleClearNotes() async {
-    if (_isDeletingNotes) return;
+  // Method to handle note deletion with authentication check
+  Future<void> _handleDeleteNote(Note note) async {
+    final userId = ref.read(authProvider).userId;
+    final userIdInt = int.tryParse(userId ?? '');
     
-    setState(() {
-      _isDeletingNotes = true;
-    });
-    
-    try {
-      await ref.read(notesProvider.notifier).clearNotes();
-      
+    if (userIdInt == null) {
       if (mounted) {
-        setState(() {
-          _lastProcessedNote = null;
-        });
-        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor inicia sesión para eliminar notas'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Eliminar nota'),
+          content: const Text('¿Estás seguro de que deseas eliminar esta nota?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        await ref.read(notesProvider.notifier).deleteNote(note.id!);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('TODAS LAS NOTAS HAN SIDO ELIMINADAS', style: TextStyle(letterSpacing: 0.5))),
+            const SnackBar(content: Text('Nota eliminada')),
           );
         }
       }
     } catch (e) {
-      debugPrint('Error clearing notes: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ERROR AL ELIMINAR LAS NOTAS', style: TextStyle(letterSpacing: 0.5))),
+          SnackBar(
+            content: Text('Error al eliminar la nota: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
-    } finally {
+      debugPrint('Error deleting note: $e');
+    }
+  }
+
+  // Method to handle clear all notes with authentication check
+  Future<void> _handleClearAllNotes() async {
+    final userId = ref.read(authProvider).userId;
+    final userIdInt = int.tryParse(userId ?? '');
+    
+    if (userIdInt == null) {
       if (mounted) {
-        setState(() {
-          _isDeletingNotes = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor inicia sesión para eliminar notas'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+      return;
+    }
+
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Eliminar todas las notas'),
+          content: const Text('¿Estás seguro de que deseas eliminar todas las notas? Esta acción no se puede deshacer.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Eliminar todo', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        await ref.read(notesProvider.notifier).clearNotes();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Todas las notas han sido eliminadas')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar las notas: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      debugPrint('Error clearing notes: $e');
     }
   }
   
@@ -422,35 +501,5 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       'MUY TRISTE',
     ];
     return moodDescriptions[moodIndex];
-  }
-  
-  // Note: Removed _navigateToNoteEditScreen as editing is now only available from calendar
-  
-  void _showClearConfirmation() {
-    if (!mounted) return;
-    
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('ELIMINAR TODAS LAS NOTAS', style: TextStyle(letterSpacing: 0.5, fontWeight: FontWeight.bold)),
-        content: const Text('¿ESTÁS SEGURO DE QUE DESEAS ELIMINAR TODAS LAS NOTAS? ESTA ACCIÓN NO SE PUEDE DESHACER.', 
-          style: TextStyle(letterSpacing: 0.3),
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCELAR', style: TextStyle(letterSpacing: 0.5)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              _handleClearNotes();
-            },
-            child: const Text('ELIMINAR', style: TextStyle(color: Colors.red, letterSpacing: 0.5, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
   }
 }

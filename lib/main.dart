@@ -8,6 +8,7 @@ import 'services/navigation_service.dart';
 import 'providers/accessibility_provider.dart';
 import 'models/accessibility_settings.dart';
 import 'theme/theme.dart';
+import 'providers/auth_provider.dart';
 
 // Global error widget builder
 Widget errorWidgetBuilder(FlutterErrorDetails errorDetails) {
@@ -55,6 +56,9 @@ Widget errorWidgetBuilder(FlutterErrorDetails errorDetails) {
   );
 }
 
+// Create a provider override reference
+final authProviderOverride = Provider<AuthProvider>((ref) => throw UnimplementedError());
+
 Future<void> main() async {
   // Set up error handling
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,88 +78,38 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize database
+  // Initialize database and auth
   try {
     debugPrint('Initializing database...');
     final db = await DatabaseHelper.instance.database;
     debugPrint('Database initialized successfully');
 
-    // Verify we can query the database
-    try {
-      final result = await db.rawQuery('SELECT sqlite_version()');
-      debugPrint('SQLite version: $result');
-    } catch (e) {
-      debugPrint('Error querying database: $e');
-      rethrow;
-    }
-  } catch (e, stackTrace) {
-    debugPrint('Error initializing database: $e');
-    debugPrint('Stack trace: $stackTrace');
+    // Initialize auth provider and load user
+    final authProviderInstance = AuthProvider();
+    await authProviderInstance.loadUser();
 
-    // Show error UI but don't crash
+    // Ensure the auth state is properly set up before running the app
     runApp(
-      MaterialApp(
+      ProviderScope(
+        overrides: [
+          authProviderOverride.overrideWithValue(authProviderInstance),
+        ],
+        child: const MyApp(),
+      ),
+    );
+  } catch (e) {
+    debugPrint('Error during initialization: $e');
+    // Run the app anyway with error state
+    runApp(
+      const MaterialApp(
         home: Scaffold(
           body: Center(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Error al inicializar la base de datos',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      e.toString(),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () async {
-                        // Try to delete and recreate the database
-                        try {
-                          await DatabaseHelper.instance.close();
-                          await DatabaseHelper.instance.deleteDatabase();
-                          runApp(const MyApp());
-                        } catch (e) {
-                          debugPrint('Error resetting database: $e');
-                          // If we can't reset, just restart the app
-                          runApp(const MyApp());
-                        }
-                      },
-                      child: const Text('Reiniciar base de datos'),
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () {
-                        runApp(const MyApp());
-                      },
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            child: Text('Error al iniciar la aplicación. Por favor, reinicie.'),
           ),
         ),
       ),
     );
-    return;
   }
-
-  // Run the app with ProviderScope
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
 }
 
 class MyApp extends ConsumerWidget {

@@ -396,7 +396,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                       Navigator.pop(context); // Close confirmation dialog
                                       try {
                                         final notesNotifier = ref.read(notesProvider.notifier);
-                                        await notesNotifier.deleteNote(note);
+                                        await notesNotifier.deleteNote(note.id!);
                                         if (mounted) {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             const SnackBar(
