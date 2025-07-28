@@ -33,9 +33,10 @@ class DatabaseHelper {
   static const String columnContent = 'content';
   static const String columnDate = 'date';
   static const String columnTags = 'tags';
+  static const String columnColor = 'color';
 
   // Database version - increment this when changing the database schema
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 3;
   
   // Database name
   static const String _databaseName = 'mood_notes.db';
@@ -120,7 +121,19 @@ class DatabaseHelper {
       await migratePasswordsToUseSalt();
     }
     
-    // Add more version-specific migrations here as needed
+    if (oldVersion < 3) {
+      // Add color column to notes table
+      try {
+        await db.execute('ALTER TABLE $tableNotes ADD COLUMN color TEXT');
+        debugPrint('Successfully added color column to notes table');
+      } catch (e) {
+        debugPrint('Error adding color column: $e');
+        // If the column already exists, we can ignore the error
+        if (!e.toString().contains('duplicate column name')) {
+          rethrow;
+        }
+      }
+    }
     
     debugPrint('Database upgrade completed');
   }
@@ -148,6 +161,7 @@ class DatabaseHelper {
         $columnContent TEXT NOT NULL,
         $columnDate TEXT NOT NULL,
         $columnTags TEXT,
+        $columnColor TEXT,
         FOREIGN KEY ($columnUserId) REFERENCES $tableUsers ($columnId) ON DELETE CASCADE
       )
     ''');
