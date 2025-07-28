@@ -11,35 +11,32 @@ class SphereWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
+    return Transform.rotate(
+      angle: -0.05, // Pequeña inclinación para efecto de nota pegada
       child: Container(
         key: ValueKey('${data.emoji}-${data.color.toARGB32()}'),
-        width: data.size,
-        height: data.size,
+        width: data.size * 1.2,
+        height: data.size * 1.2,
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              data.color.withAlpha(255), // Full opacity for the main color
-              HSLColor.fromColor(data.color).withLightness(0.7).toColor(),
-            ],
-          ),
-          shape: BoxShape.circle,
+          color: Colors.yellow[100],
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              spreadRadius: 0,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 4,
+              offset: const Offset(2, 2),
             ),
           ],
+          border: Border.all(
+            color: Colors.yellow[300]!,
+            width: 1.0,
+          ),
         ),
         child: Center(
           child: Text(
             data.emoji,
             style: TextStyle(
-              fontSize: data.size * 0.6,
+              fontSize: data.size * 0.5,
               height: 1.0,
             ),
           ),

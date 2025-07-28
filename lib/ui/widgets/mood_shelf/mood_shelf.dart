@@ -91,32 +91,31 @@ class MoodShelf extends StatelessWidget {
   }
 
   Widget _buildSphere(SphereData sphere, double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            sphere.color.withAlpha(255), // Full opacity
-            HSLColor.fromColor(sphere.color).withLightness(0.7).toColor(),
+    return Transform.rotate(
+      angle: -0.05, // Pequeña inclinación para efecto de nota pegada
+      child: Container(
+        width: size * 1.2,
+        height: size * 1.2,
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.yellow[100],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 4,
+              offset: const Offset(2, 2),
+            ),
           ],
-        ),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(26),
-            blurRadius: 8,
-            spreadRadius: 0,
-            offset: const Offset(0, 2),
+          border: Border.all(
+            color: Colors.yellow[300]!,
+            width: 1.0,
           ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          sphere.emoji,
-          style: TextStyle(fontSize: size * 0.5),
+        ),
+        child: Center(
+          child: Text(
+            sphere.emoji,
+            style: TextStyle(fontSize: size * 0.5),
+          ),
         ),
       ),
     );

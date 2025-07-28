@@ -192,28 +192,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                             child: Container(
                               width: 90,
                               height: 90,
-                              decoration: BoxDecoration(
-                                color: _moodColors[note.moodIndex].withValues(alpha: 51),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: _moodColors[note.moodIndex],
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _moodColors[note.moodIndex].withValues(alpha: 128),
-                                    blurRadius: 10,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
-                              ),
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  // Main emoji
-                                  Text(
-                                    _moodEmojis[note.moodIndex],
-                                    style: const TextStyle(fontSize: 40),
+                                  // Nota tipo post-it
+                                  Transform.rotate(
+                                    angle: -0.05, // Pequeña inclinación para efecto de nota pegada
+                                    child: Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: Colors.yellow[100],
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 4,
+                                            offset: const Offset(2, 2),
+                                          ),
+                                        ],
+                                        border: Border.all(
+                                          color: Colors.yellow[300]!,
+                                          width: 1.0,
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          _moodEmojis[note.moodIndex],
+                                          style: const TextStyle(fontSize: 40),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                   
                                   // Tap effect
@@ -228,18 +236,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                                           parent: controller,
                                           curve: Curves.easeOut,
                                         )),
-                                        child: Text(
-                                          _tapEffects[note.moodIndex],
-                                          style: TextStyle(
-                                            fontSize: 30,
-                                            color: _moodColors[note.moodIndex],
-                                            shadows: [
-                                              Shadow(
-                                                blurRadius: 5.0,
-                                                color: _moodColors[note.moodIndex]
-                                                    .withValues(alpha: 128),
+                                        child: Transform.rotate(
+                                          angle: 0.1,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.yellow[50],
+                                              border: Border.all(
+                                                color: Colors.yellow[300]!,
+                                                width: 1.0,
                                               ),
-                                            ],
+                                            ),
+                                            child: Text(
+                                              _tapEffects[note.moodIndex],
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                color: _moodColors[note.moodIndex],
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
