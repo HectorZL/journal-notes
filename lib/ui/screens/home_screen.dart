@@ -193,7 +193,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                               width: 90,
                               height: 90,
                               decoration: BoxDecoration(
-                                color: _moodColors[note.moodIndex].withOpacity(0.2),
+                                color: _moodColors[note.moodIndex].withValues(alpha: 51),
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: _moodColors[note.moodIndex],
@@ -201,7 +201,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: _moodColors[note.moodIndex].withOpacity(0.3),
+                                    color: _moodColors[note.moodIndex].withValues(alpha: 128),
                                     blurRadius: 10,
                                     spreadRadius: 1,
                                   ),
@@ -237,7 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                                               Shadow(
                                                 blurRadius: 5.0,
                                                 color: _moodColors[note.moodIndex]
-                                                    .withOpacity(0.7),
+                                                    .withValues(alpha: 128),
                                               ),
                                             ],
                                           ),

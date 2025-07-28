@@ -52,8 +52,8 @@ class MoodEmojiDisplay extends StatelessWidget {
                         padding: const EdgeInsets.all(12.0),
                         decoration: BoxDecoration(
                           color: isDeleting 
-                              ? Colors.red.withOpacity(0.2)
-                              : moodColors[moodIndex].withOpacity(0.2),
+                              ? Colors.red.withValues(alpha: 51)
+                              : moodColors[moodIndex].withValues(alpha: 51),
                           borderRadius: BorderRadius.circular(50),
                           border: Border.all(
                             color: isDeleting 

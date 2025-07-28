@@ -6,7 +6,6 @@ import 'package:notas_animo/providers/accessibility_provider.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../widgets/base_screen.dart';
-import '../../../models/accessibility_settings.dart';
 import '../../widgets/accessibility_settings_widget.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -170,7 +169,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -204,7 +203,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -248,7 +247,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {
@@ -292,7 +291,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     borderSide: BorderSide(color: colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 128),
                   contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 ),
                 validator: (value) {

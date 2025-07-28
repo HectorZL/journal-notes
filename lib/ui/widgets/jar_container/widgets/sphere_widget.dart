@@ -13,7 +13,7 @@ class SphereWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Container(
-        key: ValueKey('${data.emoji}-${data.color.value}'),
+        key: ValueKey('${data.emoji}-${data.color.toARGB32()}'),
         width: data.size,
         height: data.size,
         decoration: BoxDecoration(

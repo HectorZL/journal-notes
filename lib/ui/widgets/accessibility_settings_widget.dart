@@ -136,7 +136,7 @@ class AccessibilitySettingsWidget extends ConsumerWidget {
                     boxShadow: [
                       if (isSelected)
                         BoxShadow(
-                          color: theme.colorScheme.primary.withOpacity(0.5),
+                          color: theme.colorScheme.primary.withValues(alpha: 128),
                           blurRadius: 8,
                           spreadRadius: 2,
                         ),

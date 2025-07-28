@@ -197,11 +197,11 @@ class MyApp extends ConsumerWidget {
           seedColor: accessibilitySettings.selectedColor,
           brightness: Brightness.light,
           secondary: _adjustColorForAccessibility(
-            accessibilitySettings.selectedColor.withOpacity(0.7),
+            accessibilitySettings.selectedColor.withValues(alpha: 170),
             accessibilitySettings.colorBlindnessType,
           ),
           tertiary: _adjustColorForAccessibility(
-            accessibilitySettings.selectedColor.withOpacity(0.5),
+            accessibilitySettings.selectedColor.withValues(alpha: 130),
             accessibilitySettings.colorBlindnessType,
           ),
         ),
@@ -320,7 +320,6 @@ class MyApp extends ConsumerWidget {
     final r = toLinear(color.r.toDouble());
     final g = toLinear(color.g.toDouble());
     final b = toLinear(color.b.toDouble());
-    final a = color.alpha / 255.0;
 
     List<double> result = [r, g, b];
 
@@ -363,17 +362,12 @@ class MyApp extends ConsumerWidget {
         return color;
     }
 
-    // Convert back to sRGB and ensure values are in valid range
-    int toChannel(double value) {
-      final srgb = toSRGB(value);
-      return (srgb * 255).clamp(0, 255).round();
-    }
-
+    // Apply the color matrix and convert back to color
     return Color.fromARGB(
       color.alpha,
-      toChannel(result[0]),
-      toChannel(result[1]),
-      toChannel(result[2]),
+      (toSRGB(result[0]) * 255).round().clamp(0, 255),
+      (toSRGB(result[1]) * 255).round().clamp(0, 255),
+      (toSRGB(result[2]) * 255).round().clamp(0, 255),
     );
   }
   

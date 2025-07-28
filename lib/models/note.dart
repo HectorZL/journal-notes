@@ -30,7 +30,7 @@ class Note {
       'date': date.toIso8601String(),
       'mood_index': moodIndex,
       'tags': tags,
-      'color': color.value,
+      'color': color.toARGB32(),
     };
   }
 
@@ -57,7 +57,7 @@ class Note {
       'date': date.toIso8601String(),
       'mood_index': moodIndex,
       'tags': tags,
-      'color': color.value,
+      'color': color.toARGB32(),
     };
   }
 

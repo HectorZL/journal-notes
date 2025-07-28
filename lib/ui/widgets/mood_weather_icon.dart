@@ -54,7 +54,7 @@ class MoodWeatherIcon extends StatelessWidget {
               margin: EdgeInsets.only(bottom: size * 0.45),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.orange, Colors.orange.withOpacity(0)],
+                  colors: [Colors.orange, Colors.orange.withValues(alpha: 0)],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),

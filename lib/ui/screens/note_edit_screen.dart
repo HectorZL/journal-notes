@@ -98,7 +98,7 @@ class _FloatingWeatherIconState extends State<_FloatingWeatherIcon> with TickerP
               height: 60,
               decoration: BoxDecoration(
                 color: widget.isSelected 
-                    ? widget.color.withOpacity(0.1)
+                    ? widget.color.withValues(alpha: 25)
                     : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
