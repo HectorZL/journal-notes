@@ -40,7 +40,7 @@ class MoodShelf extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 128), // 0.5 * 255 ≈ 128
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(128), // 0.5 * 255 ≈ 128
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(8),
               bottomRight: Radius.circular(8),
@@ -99,18 +99,18 @@ class MoodShelf extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            sphere.color.withValues(alpha: 230), // 0.9 * 255 ≈ 230
+            sphere.color.withAlpha(230), // 0.9 * 255 ≈ 230
             HSLColor.fromColor(sphere.color).withLightness(0.6).toColor(),
           ],
         ),
         shape: BoxShape.circle,
         border: Border.all(
-          color: sphere.color.withValues(alpha: 230), // 0.9 * 255 ≈ 230
+          color: sphere.color.withAlpha(230), // 0.9 * 255 ≈ 230
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: sphere.color.withValues(alpha: 128), // 0.5 * 255 ≈ 128
+            color: sphere.color.withAlpha(128), // 0.5 * 255 ≈ 128
             blurRadius: 8,
             spreadRadius: 2,
             offset: const Offset(0, 2),

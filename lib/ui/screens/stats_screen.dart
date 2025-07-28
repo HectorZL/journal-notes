@@ -187,11 +187,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 128),
+            color: Theme.of(context).colorScheme.surface.withAlpha(128),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 25),
+                color: Colors.black.withAlpha(25),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -204,7 +204,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 51),
+                    color: color.withAlpha(51),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: color, size: 24),
@@ -217,7 +217,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
                       Text(
                         title,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 128),
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(128),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -225,7 +225,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
                         value,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 128),
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(128),
                         ),
                       ),
                     ],
@@ -289,11 +289,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
           margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 128),
+            color: Theme.of(context).colorScheme.surface.withAlpha(128),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 25),
+                color: Colors.black.withAlpha(25),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -357,7 +357,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [
-                                    color.withValues(alpha: 204),
+                                    color.withAlpha(204),
                                     color,
                                   ],
                                 ),
@@ -391,14 +391,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
           Icon(
             Icons.analytics_outlined,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 64),
+            color: Theme.of(context).colorScheme.onSurface.withAlpha(64),
           ),
           const SizedBox(height: 16),
           Text(
             'NO HAY DATOS PARA MOSTRAR',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 128),
+              color: Theme.of(context).colorScheme.onSurface.withAlpha(128),
               fontWeight: FontWeight.bold,
               letterSpacing: 1.0,
             ),
@@ -408,7 +408,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> with TickerProviderSt
             'AÑADE NOTAS PARA VER TUS ESTADÍSTICAS',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 128),
+              color: Theme.of(context).colorScheme.onSurface.withAlpha(128),
             ),
           ),
           const SizedBox(height: 16),
