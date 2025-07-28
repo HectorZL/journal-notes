@@ -180,7 +180,7 @@ class MyApp extends ConsumerWidget {
       title: 'Mood Notes',
       debugShowCheckedModeBanner: false,
       themeMode: _getThemeMode(accessibilitySettings.themeMode, mediaQuery.platformBrightness),
-      initialRoute: navService.getInitialRoute(),
+      initialRoute: NavigationService.splash,
       onGenerateRoute: (settings) => navService.generateRoute(settings),
       builder: (context, child) {
         return MediaQuery(

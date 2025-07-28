@@ -18,6 +18,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -199,16 +200,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               // Password field
               TextFormField(
                 controller: _passwordController,
-                obscureText: true,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
                 style: GoogleFonts.poppins(),
                 decoration: InputDecoration(
                   labelText: 'Contraseña',
-                  hintText: '••••••••',
-                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  hintText: 'Ingresa tu contraseña',
+                  prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.visibility_off_outlined),
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     onPressed: () {
-                      // TODO: Toggle password visibility
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
                     },
                   ),
                   border: OutlineInputBorder(
@@ -227,39 +234,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa tu contraseña';
                   }
-                  if (value.length < 6) {
-                    return 'La contraseña debe tener al menos 6 caracteres';
-                  }
                   return null;
                 },
+                onFieldSubmitted: (_) => _login(),
               ),
               
-              const SizedBox(height: 8),
-
-              // Forgot password
+              // Forgot password link
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () {
-                          // TODO: Implement forgot password
-                        },
+                  onPressed: _isLoading 
+                      ? null 
+                      : () => navService.navigateToForgotPassword(context),
                   style: TextButton.styleFrom(
-                    foregroundColor: colorScheme.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.only(top: 8, bottom: 16, right: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: Text(
                     '¿Olvidaste tu contraseña?',
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
+                      color: colorScheme.primary,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: 24),
+              
+              const SizedBox(height: 8),
 
               // Login button
               FilledButton(
