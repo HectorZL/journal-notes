@@ -195,14 +195,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
       ),
       // Bottom navigation bar with optimized performance
       bottomNavigationBar: Container(
-        height: _kNavigationBarHeight,
         decoration: BoxDecoration(
           color: colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: colorScheme.shadow.withValues(alpha: 26), // 0.1 * 255 ≈ 26
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+              color: Colors.black.withAlpha(26),
+              blurRadius: 10,
+              offset: const Offset(0, -1),
             ),
           ],
         ),
@@ -210,8 +209,9 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
           selectedIndex: _selectedIndex,
           onDestinationSelected: _onItemTapped,
           elevation: 0,
-          backgroundColor: colorScheme.surface,
-          surfaceTintColor: colorScheme.surfaceTint,
+          backgroundColor: Colors.transparent,
+          indicatorColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           animationDuration: _kAnimationDuration * 2,
           destinations: [
