@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
+import '../../../services/language_service.dart';
 import '../widgets/base_screen.dart';
 import '../widgets/accessibility_settings_widget.dart';
 import 'profile/edit_profile_screen.dart';
-import 'profile/change_password_screen.dart';  // Adjust the import path as needed
+import 'profile/change_password_screen.dart';
+import 'profile/faq_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -43,13 +45,14 @@ class ProfileScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final authService = ref.read(authServiceProvider);
+    final languageService = ref.watch(languageServiceProvider);
     final user = authService.currentUser ?? {
       'name': 'Usuario',
       'email': 'usuario@ejemplo.com',
     };
 
     return BaseScreen(
-      title: 'Perfil',
+      title: languageService.isEnglish ? 'Profile' : 'Perfil',
       showBackButton: true,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -93,7 +96,7 @@ class ProfileScreen extends ConsumerWidget {
             
             // Account Section
             Text(
-              'Cuenta',
+              languageService.isEnglish ? 'Account' : 'Cuenta',
               style: theme.textTheme.titleMedium?.copyWith(
                 color: colorScheme.primary,
                 fontWeight: FontWeight.bold,
@@ -147,6 +150,54 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                         );
                       }
+                    },
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: const Icon(Icons.language),
+                    title: Text(languageService.isEnglish ? 'Language' : 'Idioma'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          languageService.isEnglish ? 'English' : 'Español',
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                    onTap: () async {
+                      await languageService.toggleLanguage();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Help Section
+            Text(
+              languageService.isEnglish ? 'Help' : 'Ayuda',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.help_outline),
+                    title: Text(languageService.isEnglish ? 'FAQs' : 'Preguntas frecuentes'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const FAQScreen()),
+                      );
                     },
                   ),
                 ],
