@@ -202,35 +202,6 @@ class ProfileScreen extends ConsumerWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.notifications_outlined),
-                    title: const Text('Notificaciones'),
-                    trailing: Switch(
-                      value: true,
-                      onChanged: (value) {
-                        // TODO: Implement notifications toggle
-                      },
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: const Icon(Icons.dark_mode_outlined),
-                    title: const Text('Tema oscuro'),
-                    trailing: Switch(
-                      value: false,
-                      onChanged: (value) {
-                        // TODO: Implement theme toggle
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
             const SizedBox(height: 32),
             
             // Logout Button

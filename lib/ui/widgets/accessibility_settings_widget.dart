@@ -64,30 +64,46 @@ class AccessibilitySettingsWidget extends ConsumerWidget {
         _buildSectionTitle('Tema'),
         const SizedBox(height: 8),
         Row(
-          children: ThemeModeOption.values.map((mode) {
-            final isSelected = accessibilitySettings.themeMode == mode;
-            return Expanded(
+          children: [
+            // Botón de tema Claro
+            Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 child: ElevatedButton(
-                  onPressed: () => notifier.setThemeMode(mode),
+                  onPressed: () => notifier.setThemeMode(ThemeModeOption.light),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isSelected 
+                    backgroundColor: accessibilitySettings.themeMode == ThemeModeOption.light
                         ? theme.colorScheme.primary 
                         : theme.colorScheme.surface,
-                    foregroundColor: isSelected 
+                    foregroundColor: accessibilitySettings.themeMode == ThemeModeOption.light
                         ? theme.colorScheme.onPrimary 
                         : theme.colorScheme.onSurface,
-                    elevation: isSelected ? 2 : 0,
+                    elevation: accessibilitySettings.themeMode == ThemeModeOption.light ? 2 : 0,
                   ),
-                  child: Text(
-                    mode == ThemeModeOption.light ? 'Claro' :
-                    mode == ThemeModeOption.dark ? 'Oscuro' : 'Sistema',
-                  ),
+                  child: const Text('Claro'),
                 ),
               ),
-            );
-          }).toList(),
+            ),
+            // Botón de tema Oscuro
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: ElevatedButton(
+                  onPressed: () => notifier.setThemeMode(ThemeModeOption.dark),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accessibilitySettings.themeMode == ThemeModeOption.dark
+                        ? theme.colorScheme.primary 
+                        : theme.colorScheme.surface,
+                    foregroundColor: accessibilitySettings.themeMode == ThemeModeOption.dark
+                        ? theme.colorScheme.onPrimary 
+                        : theme.colorScheme.onSurface,
+                    elevation: accessibilitySettings.themeMode == ThemeModeOption.dark ? 2 : 0,
+                  ),
+                  child: const Text('Oscuro'),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 24),
         
@@ -159,13 +175,7 @@ class AccessibilitySettingsWidget extends ConsumerWidget {
             );
           }).toList(),
         ),
-        const SizedBox(height: 8),
-        SwitchListTile(
-          title: const Text('Modo blanco y negro'),
-          value: accessibilitySettings.isBlackAndWhite,
-          onChanged: (value) => notifier.setBlackAndWhite(value),
-          contentPadding: EdgeInsets.zero,
-        ),
+        
       ],
     );
   }
