@@ -203,14 +203,17 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               TextFormField(
                 controller: _currentPasswordController,
                 obscureText: _obscureCurrentPassword,
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 decoration: InputDecoration(
                   labelText: 'Contraseña Actual',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8)),
+                  prefixIcon: Icon(Icons.lock_outline, color: theme.colorScheme.primary),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureCurrentPassword
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
+                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
                     ),
                     onPressed: () {
                       setState(() {
@@ -218,6 +221,24 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                       });
                     },
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.error),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.4),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -233,14 +254,17 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               TextFormField(
                 controller: _newPasswordController,
                 obscureText: _obscureNewPassword,
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 decoration: InputDecoration(
                   labelText: 'Nueva Contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8)),
+                  prefixIcon: Icon(Icons.lock_outline, color: theme.colorScheme.primary),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureNewPassword
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
+                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
                     ),
                     onPressed: () {
                       setState(() {
@@ -248,6 +272,24 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                       });
                     },
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.error),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.4),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -266,14 +308,17 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirmPassword,
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 decoration: InputDecoration(
                   labelText: 'Confirmar Nueva Contraseña',
-                  prefixIcon: const Icon(Icons.lock_outline),
+                  labelStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8)),
+                  prefixIcon: Icon(Icons.lock_outline, color: theme.colorScheme.primary),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureConfirmPassword
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
+                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
                     ),
                     onPressed: () {
                       setState(() {
@@ -281,6 +326,24 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                       });
                     },
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.error),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.4),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -300,6 +363,14 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 onPressed: _isLoading ? null : _changePassword,
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  disabledBackgroundColor: theme.colorScheme.onSurface.withOpacity(0.12),
+                  disabledForegroundColor: theme.colorScheme.onSurface.withOpacity(0.38),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
                 ),
                 child: _isLoading
                     ? const SizedBox(
@@ -310,7 +381,13 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text('Cambiar Contraseña'),
+                    : Text(
+                        'Cambiar Contraseña',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
               
               const SizedBox(height: 16),
@@ -319,8 +396,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 128),
+                  color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,12 +407,15 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                       'Requisitos de contraseña:',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       '• Al menos 6 caracteres\n• No uses información personal\n• Usa una combinación de letras y números',
-                      style: theme.textTheme.bodySmall,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8),
+                      ),
                     ),
                   ],
                 ),
