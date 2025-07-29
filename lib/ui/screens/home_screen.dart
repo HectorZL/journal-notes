@@ -406,6 +406,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   
   // Method to handle note deletion with authentication check
   Future<void> _handleDeleteNote(Note note) async {
+    if (!mounted) return;
+    
     final userId = ref.read(authProvider).userId;
     final userIdInt = int.tryParse(userId ?? '');
     
@@ -453,7 +455,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       );
 
       if (confirmed == true) {
+        // Close any open dialogs
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+        
+        // Delete the note
         await ref.read(notesProvider.notifier).deleteNote(note.id!);
+        
+        // Refresh the notes list
+        await ref.refresh(notesProvider);
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Nota eliminada')),
@@ -475,6 +487,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
 
   // Method to handle clear all notes with authentication check
   Future<void> _handleClearAllNotes() async {
+    if (!mounted) return;
+    
     final userId = ref.read(authProvider).userId;
     final userIdInt = int.tryParse(userId ?? '');
     
@@ -510,7 +524,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       );
 
       if (confirmed == true) {
+        // Close any open dialogs
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+        
+        // Clear all notes
         await ref.read(notesProvider.notifier).clearNotes();
+        
+        // Refresh the notes list
+        await ref.refresh(notesProvider);
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Todas las notas han sido eliminadas')),
@@ -518,6 +542,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         }
       }
     } catch (e) {
+      debugPrint('Error clearing notes: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -526,7 +551,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
           ),
         );
       }
-      debugPrint('Error clearing notes: $e');
     }
   }
   
