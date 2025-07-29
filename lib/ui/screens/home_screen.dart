@@ -108,178 +108,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       );
     }
     
-    // Get today's notes
-    final notesAsync = ref.watch(notesProvider);
-    final todayNotes = notesAsync.when(
-      data: (notes) => _getTodaysNotes(notes),
-      loading: () => [],
-      error: (error, stack) {
-        debugPrint('Error loading notes: $error');
-        return [];
-      },
-    );
-    final hasNotes = todayNotes.isNotEmpty;
-                      
-    // Mood icons display
-    final moodIcons = Container(
-      width: MediaQuery.of(context).size.width * 0.9,
-      height: MediaQuery.of(context).size.height * 0.6,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (hasNotes)
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 20,
-              runSpacing: 20,
-              children: todayNotes.map((note) {
-                final emojiKey = '${note.id}_${note.moodIndex}';
-                
-                // Initialize controllers if they don't exist
-                _scaleControllers[emojiKey] ??= AnimationController(
-                  vsync: this,
-                  duration: const Duration(milliseconds: 500),
-                );
-                
-                final controller = _scaleControllers[emojiKey]!;
-                
-                final bounceAnimation = Tween<double>(
-                  begin: 1.0,
-                  end: _moodAnimations[note.moodIndex]['bounce'],
-                ).animate(CurvedAnimation(
-                  parent: controller,
-                  curve: Curves.elasticOut,
-                ));
-                
-                final floatAnimation = Tween<double>(
-                  begin: -10.0,
-                  end: 10.0,
-                ).animate(CurvedAnimation(
-                  parent: _floatController,
-                  curve: Curves.easeInOut,
-                ));
-                
-                return GestureDetector(
-                  onTap: () {
-                    // Show note content in a dialog without animation
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text('Tu nota (${_getMoodDescription(note.moodIndex)})'),
-                        content: SingleChildScrollView(
-                          child: Text(note.content.isNotEmpty ? note.content : 'Sin contenido'),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Cerrar'),
-                          ),
-                          TextButton(
-                            onPressed: () => _handleDeleteNote(note),
-                            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  child: AnimatedBuilder(
-                    animation: Listenable.merge([bounceAnimation, floatAnimation]),
-                    builder: (context, _) {
-                      return Transform.translate(
-                        offset: Offset(0, floatAnimation.value * 0.5),
-                        child: Transform.rotate(
-                          angle: _moodAnimations[note.moodIndex]['rotate'] * 
-                                 (floatAnimation.value / 10),
-                          child: Transform.scale(
-                            scale: controller.isAnimating
-                                ? bounceAnimation.value
-                                : 1.0 + (floatAnimation.value / 50).abs(),
-                            child: Container(
-                              width: 90,
-                              height: 90,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Nota tipo post-it
-                                  Transform.rotate(
-                                    angle: -0.05, // Pequeña inclinación para efecto de nota pegada
-                                    child: Container(
-                                      width: 80,
-                                      height: 80,
-                                      decoration: BoxDecoration(
-                                        color: Colors.yellow[100],
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.2),
-                                            blurRadius: 4,
-                                            offset: const Offset(2, 2),
-                                          ),
-                                        ],
-                                        border: Border.all(
-                                          color: Colors.yellow[300]!,
-                                          width: 1.0,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          _moodEmojis[note.moodIndex],
-                                          style: const TextStyle(fontSize: 40),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  
-                                  // Tap effect
-                                  if (controller.isAnimating)
-                                    Positioned(
-                                      top: -10,
-                                      child: FadeTransition(
-                                        opacity: Tween<double>(
-                                          begin: 1.0,
-                                          end: 0.0,
-                                        ).animate(CurvedAnimation(
-                                          parent: controller,
-                                          curve: Curves.easeOut,
-                                        )),
-                                        child: Transform.rotate(
-                                          angle: 0.1,
-                                          child: Container(
-                                            padding: const EdgeInsets.all(4),
-                                            decoration: BoxDecoration(
-                                              color: Colors.yellow[50],
-                                              border: Border.all(
-                                                color: Colors.yellow[300]!,
-                                                width: 1.0,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              _tapEffects[note.moodIndex],
-                                              style: TextStyle(
-                                                fontSize: 20,
-                                                color: _moodColors[note.moodIndex],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }).toList(),
-            )
-          else
-            const SizedBox.shrink(),
-        ],
-      ),
-    );
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('MIS EMOCIONES', style: TextStyle(letterSpacing: 1.0, fontWeight: FontWeight.bold)),
@@ -287,92 +115,291 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
           // Show delete button only if we have notes
           Builder(
             builder: (context) {
-              return notesAsync.when(
-                data: (notes) => notes.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: _handleClearAllNotes,
-                        tooltip: 'LIMPIAR TODO',
-                      )
-                    : const SizedBox.shrink(),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+              return Consumer(
+                builder: (context, ref, child) {
+                  final notesAsync = ref.watch(notesProvider);
+                  return notesAsync.when(
+                    data: (notes) => notes.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: _handleClearAllNotes,
+                            tooltip: 'LIMPIAR TODO',
+                          )
+                        : const SizedBox.shrink(),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  );
+                },
               );
             },
           ),
         ],
       ),
-      // Remove any floating action button that might be causing the duplicate
-      
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                key: _contentKey,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: hasNotes 
-                          ? moodIcons
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+      body: Consumer(
+        builder: (context, ref, child) {
+          final notesAsync = ref.watch(notesProvider);
+          
+          return notesAsync.when(
+            data: (allNotes) {
+              final todayNotes = _getTodaysNotes(allNotes);
+              final hasNotes = todayNotes.isNotEmpty;
+              
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        key: _contentKey,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: hasNotes 
+                                  ? _buildMoodIcons(todayNotes)
+                                  : Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        // Sticker/message
+                                        Container(
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(128), 
+                                            borderRadius: BorderRadius.circular(20),
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                color: Colors.black12,
+                                                blurRadius: 10,
+                                                spreadRadius: 2,
+                                              ),
+                                            ],
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              const Text(
+                                                '📝',
+                                                style: TextStyle(fontSize: 60),
+                                              ),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                '¡AGREGA TU PRIMERA EMOCIÓN DEL DÍA!',
+                                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 1.0,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'TOCA EL BOTÓN + PARA COMENZAR',
+                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(200),
+                                                  fontWeight: FontWeight.w500,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) {
+              debugPrint('Error loading notes: $error\n$stack');
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading notes: ${error.toString()}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => _initialize(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+  
+  Widget _buildMoodIcons(List<Note> todayNotes) {
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.9,
+      height: MediaQuery.of(context).size.height * 0.6,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 20,
+            runSpacing: 20,
+            children: todayNotes.map((note) {
+              final emojiKey = '${note.id}_${note.moodIndex}';
+              
+              // Initialize controllers if they don't exist
+              _scaleControllers[emojiKey] ??= AnimationController(
+                vsync: this,
+                duration: const Duration(milliseconds: 500),
+              );
+              
+              final controller = _scaleControllers[emojiKey]!;
+              
+              final bounceAnimation = Tween<double>(
+                begin: 1.0,
+                end: _moodAnimations[note.moodIndex]['bounce'],
+              ).animate(CurvedAnimation(
+                parent: controller,
+                curve: Curves.elasticOut,
+              ));
+              
+              final floatAnimation = Tween<double>(
+                begin: -10.0,
+                end: 10.0,
+              ).animate(CurvedAnimation(
+                parent: _floatController,
+                curve: Curves.easeInOut,
+              ));
+              
+              return GestureDetector(
+                onTap: () {
+                  // Show note content in a dialog without animation
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Tu nota (${_getMoodDescription(note.moodIndex)})'),
+                      content: SingleChildScrollView(
+                        child: Text(note.content.isNotEmpty ? note.content : 'Sin contenido'),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Cerrar'),
+                        ),
+                        TextButton(
+                          onPressed: () => _handleDeleteNote(note),
+                          child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([bounceAnimation, floatAnimation]),
+                  builder: (context, _) {
+                    return Transform.translate(
+                      offset: Offset(0, floatAnimation.value * 0.5),
+                      child: Transform.rotate(
+                        angle: _moodAnimations[note.moodIndex]['rotate'] * 
+                               (floatAnimation.value / 10),
+                        child: Transform.scale(
+                          scale: controller.isAnimating
+                              ? bounceAnimation.value
+                              : 1.0 + (floatAnimation.value / 50).abs(),
+                          child: Container(
+                            width: 90,
+                            height: 90,
+                            child: Stack(
+                              alignment: Alignment.center,
                               children: [
-                                // Sticker/message
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(128), 
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 10,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      const Text(
-                                        '📝',
-                                        style: TextStyle(fontSize: 60),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        '¡AGREGA TU PRIMERA EMOCIÓN DEL DÍA!',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 1.0,
+                                // Nota tipo post-it
+                                Transform.rotate(
+                                  angle: -0.05, // Pequeña inclinación para efecto de nota pegada
+                                  child: Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: Colors.yellow[100],
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 4,
+                                          offset: const Offset(2, 2),
                                         ),
-                                        textAlign: TextAlign.center,
+                                      ],
+                                      border: Border.all(
+                                        color: Colors.yellow[300]!,
+                                        width: 1.0,
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'TOCA EL BOTÓN + PARA COMENZAR',
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(200),
-                                          fontWeight: FontWeight.w500,
-                                          letterSpacing: 0.5,
-                                        ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        _moodEmojis[note.moodIndex],
+                                        style: const TextStyle(fontSize: 40),
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
+                                // Tap effect
+                                if (controller.isAnimating)
+                                  Positioned(
+                                    top: -10,
+                                    child: FadeTransition(
+                                      opacity: Tween<double>(
+                                        begin: 1.0,
+                                        end: 0.0,
+                                      ).animate(CurvedAnimation(
+                                        parent: controller,
+                                        curve: Curves.easeOut,
+                                      )),
+                                      child: Transform.rotate(
+                                        angle: 0.1,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.yellow[50],
+                                            border: Border.all(
+                                              color: Colors.yellow[300]!,
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            _tapEffects[note.moodIndex],
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              color: _moodColors[note.moodIndex],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
-                    ),
-                  ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-            ],
+              );
+            }).toList(),
           ),
-        ),
+        ],
       ),
     );
   }

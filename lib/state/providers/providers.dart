@@ -191,15 +191,18 @@ class NotesNotifier extends StateNotifier<AsyncValue<List<Note>>> {
         throw Exception('No valid user ID available for note deletion');
       }
       
-      state = const AsyncValue.loading();
-      
-      // Get current notes for undo functionality
+      // Get current notes before setting loading state
       final currentNotes = state.value ?? [];
+      
+      // Save notes for undo functionality before any changes
       _lastDeletedNotes = currentNotes.where((note) => note.id == noteId).toList();
       _lastActionWasClear = false;
       
+      // Set loading state after we've saved the current state
+      state = const AsyncValue.loading();
+      
       // Delete from database
-      final result = await _dbHelper.deleteNote(noteId);
+      final result = await _dbHelper.deleteNoteWithUserId(noteId, userId: _currentUserId!);
       
       if (result > 0) {
         // Update the state by removing the deleted note
@@ -211,7 +214,8 @@ class NotesNotifier extends StateNotifier<AsyncValue<List<Note>>> {
       }
     } catch (e, stackTrace) {
       debugPrint('Error deleting note: $e\n$stackTrace');
-      state = AsyncValue.error(e, stackTrace);
+      // Revert to the previous state on error
+      state = AsyncValue.data(state.value ?? []);
       rethrow;
     }
   }
