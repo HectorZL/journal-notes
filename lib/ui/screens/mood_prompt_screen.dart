@@ -211,21 +211,6 @@ class _MoodButtonState extends State<_MoodButton> {
           child: Container(
             width: widget.size,
             height: widget.size,
-            decoration: BoxDecoration(
-              color: widget.color.withValues(alpha: 26), // 0.1 * 255 ≈ 26
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: widget.color.withValues(alpha: 77), // 0.3 * 255 ≈ 77
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.color.withValues(alpha: 26), // 0.1 * 255 ≈ 26
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
             child: Center(
               child: Text(
                 widget.emoji,
