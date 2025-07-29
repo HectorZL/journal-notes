@@ -52,9 +52,14 @@ class NotesNotifier extends StateNotifier<AsyncValue<List<Note>>> {
       }
       
       await loadNotes(userId: userId);
-    } catch (e, stackTrace) {
+    } on Exception catch (e, stackTrace) {
       debugPrint('Error in setCurrentUser: $e\n$stackTrace');
       state = AsyncValue.error('Error setting current user', stackTrace);
+      rethrow;
+    } catch (e, stackTrace) {
+      debugPrint('Unexpected error in setCurrentUser: $e\n$stackTrace');
+      state = AsyncValue.error('Unexpected error setting current user', stackTrace);
+      rethrow;
     }
   }
 
@@ -132,9 +137,13 @@ class NotesNotifier extends StateNotifier<AsyncValue<List<Note>>> {
       state = state.whenData((notes) => [newNote, ...notes]);
       
       return newNote;
-    } catch (e, stackTrace) {
-      debugPrint('Error adding note: $e');
+    } on Exception catch (e, stackTrace) {
+      debugPrint('Error adding note: $e\n$stackTrace');
       state = AsyncValue.error('Error al agregar la nota: $e', stackTrace);
+      rethrow;
+    } catch (e, stackTrace) {
+      debugPrint('Unexpected error adding note: $e\n$stackTrace');
+      state = AsyncValue.error('Unexpected error al agregar la nota', stackTrace);
       rethrow;
     }
   }
@@ -176,7 +185,7 @@ class NotesNotifier extends StateNotifier<AsyncValue<List<Note>>> {
         }
       });
     } catch (e, stackTrace) {
-      debugPrint('Error updating note: $e');
+      debugPrint('Error updating note: $e\n$stackTrace');
       state = AsyncValue.error('Error al actualizar la nota: $e', stackTrace);
       rethrow;
     }
@@ -185,10 +194,14 @@ class NotesNotifier extends StateNotifier<AsyncValue<List<Note>>> {
   // Delete a note by ID
   Future<void> deleteNote(int noteId) async {
     try {
+      if (noteId == null) {
+        throw Exception('No se puede eliminar la nota: ID no válido');
+      }
+      
       debugPrint('Attempting to delete note with ID: $noteId');
       
       if (_currentUserId == null || _currentUserId! <= 0) {
-        throw Exception('No valid user ID available for note deletion');
+        throw Exception('No se pudo identificar al usuario. Por favor, inicia sesión nuevamente.');
       }
       
       // Get current notes before setting loading state
@@ -210,12 +223,13 @@ class NotesNotifier extends StateNotifier<AsyncValue<List<Note>>> {
         state = AsyncValue.data(updatedNotes);
         debugPrint('Successfully deleted note with ID: $noteId');
       } else {
-        throw Exception('No note was deleted. Note ID might not exist.');
+        // If no rows were affected, the note might not exist or belong to the user
+        state = AsyncValue.data(currentNotes);
+        throw Exception('No se pudo eliminar la nota. La nota no existe o no tienes permiso.');
       }
-    } catch (e, stackTrace) {
-      debugPrint('Error deleting note: $e\n$stackTrace');
-      // Revert to the previous state on error
-      state = AsyncValue.data(state.value ?? []);
+    } catch (e) {
+      debugPrint('Error in deleteNote: $e');
+      state = AsyncValue.error(e, StackTrace.current);
       rethrow;
     }
   }

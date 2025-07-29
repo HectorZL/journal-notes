@@ -421,6 +421,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       return;
     }
 
+    if (note.id == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: No se puede eliminar la nota. ID no válido.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       final confirmed = await showDialog<bool>(
         context: context,
@@ -449,6 +461,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         }
       }
     } catch (e) {
+      debugPrint('Error deleting note: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -457,7 +470,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
           ),
         );
       }
-      debugPrint('Error deleting note: $e');
     }
   }
 

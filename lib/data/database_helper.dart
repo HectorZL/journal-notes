@@ -314,25 +314,35 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getNotes(int userId, {DateTime? date}) async {
     try {
+      if (userId <= 0) {
+        throw ArgumentError('Invalid user ID: $userId');
+      }
+      
       final db = await database;
+      debugPrint('Fetching notes for user ID: $userId' + (date != null ? ' on date: $date' : ''));
       
       if (date != null) {
         final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-        return await db.query(
+        final notes = await db.query(
           tableNotes,
           where: '$columnUserId = ? AND date($columnDate) = date(?)',
           whereArgs: [userId, dateStr],
         );
+        debugPrint('Found ${notes.length} notes for the specified date');
+        return notes;
       }
       
-      return await db.query(
+      final notes = await db.query(
         tableNotes,
         where: '$columnUserId = ?',
         whereArgs: [userId],
         orderBy: '$columnDate DESC',
       );
-    } catch (e) {
-      debugPrint('Error getting notes: $e');
+      
+      debugPrint('Successfully loaded ${notes.length} notes for user ID: $userId');
+      return notes;
+    } catch (e, stackTrace) {
+      debugPrint('Error in getNotes: $e\n$stackTrace');
       rethrow;
     }
   }

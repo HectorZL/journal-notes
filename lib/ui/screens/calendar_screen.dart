@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:notas_animo/providers/auth_provider.dart';
 import 'package:notas_animo/ui/screens/note_edit_screen.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
+    _loadUserNotes();
+  }
+
+  Future<void> _loadUserNotes() async {
+    try {
+      final authState = ref.read(authProvider);
+      final userId = authState.userIdAsInt;
+      
+      if (userId == null || userId <= 0) {
+        debugPrint('Error: Invalid user ID: $userId');
+        return;
+      }
+      
+      debugPrint('Loading notes for user ID: $userId');
+      await ref.read(notesProvider.notifier).setCurrentUser(userId);
+    } catch (e, stackTrace) {
+      debugPrint('Error loading user notes: $e\n$stackTrace');
+    }
   }
 
   Map<DateTime, List<Note>> _getEventsForCalendar(DateTime first, DateTime last) {
@@ -48,15 +67,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('CALENDARIO DE ESTADOS DE ÁNIMO', 
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.0,
-          ),
-        ),
-      ),
+      appBar: buildAppBar(),
       body: Column(
         children: [
           TableCalendar<Note>(
@@ -124,6 +135,84 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         ],
       ),
     );
+  }
+
+  AppBar buildAppBar() {
+    return AppBar(
+      title: const Text('CALENDARIO DE ESTADOS DE ÁNIMO', 
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.0,
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.delete_sweep),
+          onPressed: _handleClearAllNotes,
+          tooltip: 'Eliminar todas las notas',
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleClearAllNotes() async {
+    final userId = ref.read(authProvider).userId;
+    final userIdInt = int.tryParse(userId ?? '');
+    
+    if (userIdInt == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor inicia sesión para eliminar notas'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Eliminar todas las notas'),
+          content: const Text('¿Estás seguro de que deseas eliminar todas las notas? Esta acción no se puede deshacer.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        await ref.read(notesProvider.notifier).clearNotes();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Todas las notas han sido eliminadas'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar las notas: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      debugPrint('Error clearing notes: $e');
+    }
   }
 
   Widget _buildNotesList() {
@@ -363,90 +452,53 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       ),
                       const VerticalDivider(),
                       TextButton(
-                        onPressed: () {
-                          Navigator.pop(context); // Close the details dialog
-                          // Show confirmation dialog
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: Text('ELIMINAR NOTA'.toUpperCase(), 
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
+                        onPressed: () async {
+                          Navigator.pop(context); // Close confirmation dialog
+                          
+                          if (note.id == null) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Error: No se puede eliminar la nota. ID no válido.'),
+                                  backgroundColor: Colors.red,
                                 ),
-                                content: Text('¿ESTÁS SEGURO DE QUE QUIERES ELIMINAR ESTA NOTA?'.toUpperCase(),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: 0.3,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('CANCELAR',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () async {
-                                      Navigator.pop(context); // Close confirmation dialog
-                                      try {
-                                        final notesNotifier = ref.read(notesProvider.notifier);
-                                        await notesNotifier.deleteNote(note.id!);
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('NOTA ELIMINADA CORRECTAMENTE',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 0.3,
-                                                ),
-                                              ),
-                                              duration: Duration(seconds: 2),
-                                            ),
-                                          );
-                                        }
-                                      } catch (e) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('ERROR AL ELIMINAR LA NOTA: ${e.toString().toUpperCase()}',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 0.3,
-                                                ),
-                                              ),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    },
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.red,
-                                    ),
-                                    child: const Text('ELIMINAR',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               );
-                            },
-                          );
+                            }
+                            return;
+                          }
+
+                          try {
+                            final notesNotifier = ref.read(notesProvider.notifier);
+                            await notesNotifier.deleteNote(note.id!);
+                            
+                            if (mounted) {
+                              // Refresh the notes after successful deletion
+                              await ref.refresh(notesProvider);
+                               
+                              // Show success message
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Nota eliminada correctamente'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            debugPrint('Error deleting note: $e');
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error al eliminar la nota: ${e.toString()}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
                         },
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
+                        child: const Text(
+                          'Eliminar',
+                          style: TextStyle(color: Colors.red),
                         ),
-                        child: const Text('Eliminar'),
                       ),
                     ],
                   ),

@@ -28,8 +28,6 @@ class AuthProvider extends ChangeNotifier {
     loadUser();
   }
 
-  get id => null;
-
   Future<void> _setUser(String id, String? email, String? name) async {
     _isAuthenticated = true;
     _userId = id;
