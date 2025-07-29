@@ -125,12 +125,16 @@ class _FloatingWeatherIconState extends State<_FloatingWeatherIcon> with TickerP
 class NoteEditScreen extends ConsumerStatefulWidget {
   final int initialMoodIndex;
   final Color moodColor;
+  final String moodDescription;
+  final String moodEmoji;
   final Note? noteToEdit;
   
   const NoteEditScreen({
     Key? key,
     required this.initialMoodIndex,
     required this.moodColor,
+    this.moodDescription = '',
+    this.moodEmoji = '😊',
     this.noteToEdit,
   }) : super(key: key);
 
@@ -148,7 +152,6 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
   void initState() {
     super.initState();
     _currentMoodIndex = widget.initialMoodIndex;
-    // If editing an existing note, pre-fill the content
     if (widget.noteToEdit != null) {
       _controller.text = widget.noteToEdit!.content;
     }
@@ -214,44 +217,42 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
         throw Exception('No se pudo obtener el ID de usuario válido');
       }
       
-      // Create the updated note
+      // Create the updated note with all necessary fields
       final note = Note(
-        id: widget.noteToEdit?.id,
+        id: widget.noteToEdit?.id,  // This will be null for new notes
         userId: userId,
         content: _controller.text.trim(),
         moodIndex: _currentMoodIndex,
         date: widget.noteToEdit?.date ?? now,
-        color: widget.noteToEdit?.color ?? Colors.blue,
+        color: widget.noteToEdit?.color ?? widget.moodColor,
       );
 
-      // Get the notes notifier
       final notesNotifier = ref.read(notesProvider.notifier);
       
-      // Save to database
       if (isEditing) {
+        if (widget.noteToEdit?.id == null) {
+          throw Exception('No se pudo actualizar la nota: ID no válido');
+        }
         await notesNotifier.updateNote(note);
       } else {
         await notesNotifier.addNote(note);
       }
-      
-      // Show success feedback
+
       if (!mounted) return;
-      
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
-      scaffoldMessenger.clearSnackBars();
-      
-      // Show success message
-      final snackBar = SnackBar(
-        content: Text(isEditing ? 'Nota actualizada' : 'Nota guardada correctamente'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isEditing ? 'Nota actualizada' : 'Nota guardada correctamente'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 2),
         ),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 2),
       );
-      
-      // Navigate back to home screen
+
       if (mounted) {
         Navigator.of(context).pop(true);
       }
@@ -366,50 +367,24 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final weatherIcons = [
-      Icons.wb_sunny,  // Sunny
-      Icons.wb_cloudy,  // Partly Cloudy
-      Icons.cloud,      // Cloudy
-      Icons.grain,     // Rainy
-      Icons.thunderstorm, // Stormy
-    ];
-    
-    final weatherDescriptions = [
-      '¡Soleado!',
-      'Parcialmente nublado',
-      'Nublado',
-      'Lluvioso',
-      'Tormentoso'
-    ];
-    
-    final weatherColors = [
-      Colors.orange,
-      Colors.blueGrey[400]!,
-      Colors.grey[600]!,
-      Colors.blue[400]!,
-      Colors.deepPurple[400]!,
-    ];
+    final isEditing = widget.noteToEdit != null;
     
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.noteToEdit == null ? 'Nueva nota' : 'Editar nota'),
+          title: Text(isEditing ? 'Editar Nota' : 'Nueva Nota'),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () async {
               final shouldPop = await _onWillPop();
               if (shouldPop && mounted) {
-                Navigator.of(context).pop(false);
+                Navigator.of(context).pop();
               }
             },
           ),
-          elevation: 0,
-          scrolledUnderElevation: 1,
           actions: [
-            if (widget.noteToEdit != null && !_isSubmitting)
+            if (isEditing && !_isSubmitting)
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 onPressed: _deleteNote,
@@ -433,88 +408,61 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
         body: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Mood indicator
-                Card(
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: colorScheme.outlineVariant,
-                      width: 1,
-                    ),
+                // Selected mood display
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+                  decoration: BoxDecoration(
+                    color: widget.moodColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12.0),
+                    border: Border.all(color: widget.moodColor.withOpacity(0.3)),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.mood_rounded,
-                              color: colorScheme.primary,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Tu estado de ánimo',
-                              style: textTheme.titleMedium?.copyWith(
-                                color: colorScheme.onSurface,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.moodEmoji.isNotEmpty 
+                            ? widget.moodEmoji 
+                            : '😊', // Fallback emoji
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        widget.moodDescription.isNotEmpty
+                            ? widget.moodDescription
+                            : 'Sin estado de ánimo', // Fallback text
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: widget.moodColor,
                         ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          height: 100,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: List.generate(
-                              weatherIcons.length,
-                              (index) => Positioned(
-                                left: index * 70.0,
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _currentMoodIndex = index),
-                                  child: _FloatingWeatherIcon(
-                              icon: weatherIcons[index],
-                                    isSelected: _currentMoodIndex == index,
-                              color: weatherColors[index],
-                              index: index,
-                            ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          weatherDescriptions[_currentMoodIndex],
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: weatherColors[_currentMoodIndex],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),
-                
-                // Note content field
+                // Reason input
+                Text(
+                  isEditing ? '¿Por qué te sentiste así?' : '¿Por qué te sientes así?',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _controller,
-                  decoration: const InputDecoration(
-                    labelText: '¿Qué te hace sentir así?',
-                    hintText: 'Describe brevemente qué te hace sentir así...',
-                    border: OutlineInputBorder(),
+                  maxLines: 8,
+                  decoration: InputDecoration(
+                    hintText: 'Escribe aquí...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
                   ),
-                  maxLines: 5,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Por favor escribe algo sobre cómo te sientes';
@@ -523,7 +471,6 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
-                
                 // Save button
                 SizedBox(
                   width: double.infinity,
@@ -531,6 +478,9 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
                     onPressed: _isSubmitting ? null : _validateAndSave,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
                     ),
                     child: _isSubmitting
                         ? const SizedBox(
@@ -538,9 +488,9 @@ class _NoteEditScreenState extends ConsumerState<NoteEditScreen> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text(
-                            'Guardar nota',
-                            style: TextStyle(fontSize: 16),
+                        : Text(
+                            isEditing ? 'Actualizar nota' : 'Guardar nota',
+                            style: const TextStyle(fontSize: 16),
                           ),
                   ),
                 ),

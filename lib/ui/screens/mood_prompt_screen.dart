@@ -57,6 +57,8 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
     '😭', // Crying
   ];
 
+  int? _selectedMoodIndex;
+
   @override
   void initState() {
     super.initState();
@@ -89,14 +91,18 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
   }
 
   void _onMoodSelected(int index, BuildContext context) {
-    // Use pushReplacement to replace MoodPromptScreen with NoteEditScreen
-    // When NoteEditScreen is popped, it will return to HomeScreen
+    setState(() {
+      _selectedMoodIndex = index;
+    });
+    // Navigate to NoteEditScreen with the selected mood
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => NoteEditScreen(
           initialMoodIndex: index,
           moodColor: moodColors[index],
+          moodDescription: moodDescriptions[index],
+          moodEmoji: moodIcons[index],
         ),
       ),
     );
@@ -125,7 +131,9 @@ class _MoodPromptScreenState extends ConsumerState<MoodPromptScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('¿Cómo te sientes hoy?'),
+        title: _selectedMoodIndex != null
+            ? Text(moodDescriptions[_selectedMoodIndex!])
+            : const Text('¿Cómo te sientes hoy?'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(false),

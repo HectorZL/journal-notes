@@ -340,6 +340,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               builder: (context) => NoteEditScreen(
                                 initialMoodIndex: note.moodIndex,
                                 moodColor: _getMoodColor(note.moodIndex),
+                                moodDescription: ['EXCELENTE', 'BIEN', 'NEUTRAL', 'NO MUY BIEN', 'MAL'][note.moodIndex],
+                                moodEmoji: ['😄', '🙂', '😐', '🙁', '😞'][note.moodIndex],
                                 noteToEdit: note,
                               ),
                             ),
