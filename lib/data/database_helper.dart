@@ -18,6 +18,7 @@ class DatabaseHelper {
   // Table names
   static const String tableUsers = 'users';
   static const String tableNotes = 'notes';
+  static const String tableFaceAuth = 'face_auth';
 
   // User Table Columns
   static const String columnId = 'id';
@@ -36,8 +37,11 @@ class DatabaseHelper {
   static const String columnTags = 'tags';
   static const String columnColor = 'color';
 
+  // Face Authentication Table Columns
+  static const String columnDescriptorPath = 'descriptor_path';
+
   // Database version - increment this when changing the database schema
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 5;
   
   // Database name
   static const String _databaseName = 'mood_notes.db';
@@ -149,6 +153,18 @@ class DatabaseHelper {
       }
     }
     
+    if (oldVersion < 5) {
+      // Create face authentication table
+      await db.execute('''
+        CREATE TABLE $tableFaceAuth (
+          $columnUserId INTEGER PRIMARY KEY,
+          email TEXT NOT NULL,
+          $columnDescriptorPath TEXT NOT NULL,
+          $columnCreatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+      ''');
+    }
+    
     debugPrint('Database upgrade completed');
   }
 
@@ -178,6 +194,16 @@ class DatabaseHelper {
         $columnTags TEXT,
         $columnColor TEXT,
         FOREIGN KEY ($columnUserId) REFERENCES $tableUsers ($columnId) ON DELETE CASCADE
+      )
+    ''');
+    
+    // Create face authentication table
+    await db.execute('''
+      CREATE TABLE $tableFaceAuth (
+        $columnUserId INTEGER PRIMARY KEY,
+        email TEXT NOT NULL,
+        $columnDescriptorPath TEXT NOT NULL,
+        $columnCreatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
       )
     ''');
     
@@ -552,6 +578,11 @@ class DatabaseHelper {
         "SELECT name FROM sqlite_master WHERE type='table' AND name='$tableUsers'"
       );
       
+      // Verificar si la tabla de autenticación facial existe
+      final faceAuthTable = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='$tableFaceAuth'"
+      );
+      
       // Verificar restricciones de clave foránea
       final foreignKeys = await db.rawQuery('PRAGMA foreign_keys');
       
@@ -562,6 +593,7 @@ class DatabaseHelper {
         'database_path': db.path,
         'notes_table_exists': notesTable.isNotEmpty,
         'users_table_exists': usersTable.isNotEmpty,
+        'face_auth_table_exists': faceAuthTable.isNotEmpty,
         'foreign_keys_enabled': foreignKeys.first['foreign_keys'] == 1,
         'database_info': dbInfo,
         'is_database_open': db.isOpen,
@@ -617,6 +649,51 @@ class DatabaseHelper {
     } catch (e, stackTrace) {
       debugPrint('Error deleting and recreating database: $e');
       debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  // Create face authentication record
+  Future<int> insertFaceAuthData({
+    required String userId,
+    required String email,
+    required String descriptorPath,
+  }) async {
+    try {
+      final db = await database;
+      
+      // First check if user already has a face auth record
+      final existing = await db.query(
+        tableFaceAuth,
+        where: '$columnUserId = ?',
+        whereArgs: [userId],
+      );
+      
+      final data = {
+        columnUserId: userId,
+        'email': email,
+        columnDescriptorPath: descriptorPath,
+        columnCreatedAt: DateTime.now().toIso8601String(),
+      };
+      
+      if (existing.isEmpty) {
+        // Insert new record
+        return await db.insert(
+          tableFaceAuth,
+          data,
+          conflictAlgorithm: ConflictAlgorithm.fail,
+        );
+      } else {
+        // Update existing record
+        return await db.update(
+          tableFaceAuth,
+          data,
+          where: '$columnUserId = ?',
+          whereArgs: [userId],
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving face auth data: $e');
       rethrow;
     }
   }
