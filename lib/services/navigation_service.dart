@@ -19,6 +19,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
 // Define navigation service class
 class NavigationService {
   final Ref _ref;
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   
   NavigationService(this._ref);
   
@@ -42,12 +43,18 @@ class NavigationService {
   
   // Generate routes
   Route<dynamic> generateRoute(RouteSettings settings) {
+    // Special case for register flow - don't redirect to login if we're in the middle of registration
+    final isInRegistrationFlow = settings.name == register || 
+        (navigatorKey.currentContext != null && 
+         ModalRoute.of(navigatorKey.currentContext!)?.settings.name == register);
+    
     // If not authenticated and not on login/register/forgot-password, redirect to login
     if (!isAuthenticated && 
         settings.name != login && 
         settings.name != register &&
         settings.name != forgotPassword &&
-        !(settings.name?.startsWith('$resetPassword/') ?? false)) {
+        !(settings.name?.startsWith('$resetPassword/') ?? false) &&
+        !isInRegistrationFlow) {
       return _buildRoute(settings, const LoginScreen(), isLoginScreen: true);
     }
     
@@ -58,8 +65,13 @@ class NavigationService {
             ? _buildRoute(settings, const MainNavigationScreen())
             : _buildRoute(settings, const LoginScreen(), isLoginScreen: true);
       case login:
+        // If already authenticated, go to home
+        if (isAuthenticated) {
+          return _buildRoute(settings, const MainNavigationScreen());
+        }
         return _buildRoute(settings, const LoginScreen(), isLoginScreen: true);
       case register:
+        // Allow access to register screen even if authenticated
         return _buildRoute(settings, const RegisterScreen());
       case forgotPassword:
         return _buildRoute(settings, const ForgotPasswordScreen());

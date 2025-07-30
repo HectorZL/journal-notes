@@ -11,11 +11,13 @@ class AuthProvider extends ChangeNotifier {
   String? _userId;
   String? _userEmail;
   String? _userName;
+  String? _profilePicturePath;
 
   bool get isAuthenticated => _isAuthenticated;
   String? get userId => _userId;
   String? get userEmail => _userEmail;
   String? get userName => _userName;
+  String? get profilePicturePath => _profilePicturePath;
 
   int? get userIdAsInt {
     if (_userId == null) return null;
@@ -28,11 +30,20 @@ class AuthProvider extends ChangeNotifier {
     loadUser();
   }
 
-  Future<void> _setUser(String id, String? email, String? name) async {
+  Future<void> _setUser(String id, String? email, String? name, {String? profilePicture}) async {
     _isAuthenticated = true;
     _userId = id;
     _userEmail = email;
     _userName = name;
+    _profilePicturePath = profilePicture;
+    
+    // Save to secure storage
+    await _storage.write(key: 'user_id', value: id);
+    if (email != null) await _storage.write(key: 'user_email', value: email);
+    if (name != null) await _storage.write(key: 'user_name', value: name);
+    if (profilePicture != null) {
+      await _storage.write(key: 'profile_picture', value: profilePicture);
+    }
     
     // Update notes provider with the new user ID
     if (_ref != null) {
@@ -50,36 +61,20 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> loadUser() async {
     try {
-      debugPrint('Loading user from secure storage...');
-      
-      // Read all user data in parallel
-      final results = await Future.wait([
-        _storage.read(key: 'user_id'),
-        _storage.read(key: 'user_email'),
-        _storage.read(key: 'user_name'),
-      ]);
-      
-      final id = results[0];
-      final email = results[1];
-      final name = results[2];
-      
-      debugPrint('Retrieved user data - ID: $id, Email: $email');
-      
-      if (id != null && id.isNotEmpty) {
-        await _setUser(id, email, name);
-        debugPrint('User loaded successfully from secure storage');
-      } else {
-        debugPrint('No user ID found in secure storage');
-        await _clearUser();
+      final id = await _storage.read(key: 'user_id');
+      if (id != null) {
+        final email = await _storage.read(key: 'user_email');
+        final name = await _storage.read(key: 'user_name');
+        final profilePicture = await _storage.read(key: 'profile_picture');
+        await _setUser(id, email, name, profilePicture: profilePicture);
       }
-    } catch (e, stackTrace) {
-      debugPrint('Error loading user: $e\n$stackTrace');
-      await _clearUser();
-      rethrow;
+    } catch (e) {
+      debugPrint('Error loading user data: $e');
+      // Don't throw, just log the error
     }
   }
 
-  Future<void> login(String id, String email, String name) async {
+  Future<void> login(String id, String email, String name, {String? profilePicture}) async {
     try {
       // Validate user ID before proceeding
       final userId = int.tryParse(id);
@@ -93,11 +88,14 @@ class AuthProvider extends ChangeNotifier {
       await _storage.write(key: 'user_id', value: id);
       await _storage.write(key: 'user_email', value: email);
       await _storage.write(key: 'user_name', value: name);
+      if (profilePicture != null) {
+        await _storage.write(key: 'profile_picture', value: profilePicture);
+      }
       
       debugPrint('User data saved successfully');
       
       // Update the current user in memory
-      await _setUser(id, email, name);
+      await _setUser(id, email, name, profilePicture: profilePicture);
       
       debugPrint('User logged in successfully - ID: $id, Email: $email');
     } catch (e, stackTrace) {
@@ -113,6 +111,7 @@ class AuthProvider extends ChangeNotifier {
       _userId = null;
       _userEmail = null;
       _userName = null;
+      _profilePicturePath = null;
       notifyListeners();
     } catch (e) {
       debugPrint('Error during logout: $e');
@@ -120,7 +119,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateUserData({String? name, String? email}) async {
+  Future<void> updateUserData({String? name, String? email, String? profilePicture}) async {
     try {
       if (name != null) {
         await _storage.write(key: 'user_name', value: name);
@@ -129,6 +128,10 @@ class AuthProvider extends ChangeNotifier {
       if (email != null) {
         await _storage.write(key: 'user_email', value: email);
         _userEmail = email;
+      }
+      if (profilePicture != null) {
+        await _storage.write(key: 'profile_picture', value: profilePicture);
+        _profilePicturePath = profilePicture;
       }
       notifyListeners();
     } catch (e) {
@@ -142,6 +145,7 @@ class AuthProvider extends ChangeNotifier {
     _userId = null;
     _userEmail = null;
     _userName = null;
+    _profilePicturePath = null;
     
     // Clear any user-specific data
     if (_ref != null) {

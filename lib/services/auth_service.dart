@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database_helper.dart';
 import '../providers/auth_provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(ref);
@@ -42,6 +44,7 @@ class AuthService {
       'id': authState.userId,
       'email': authState.userEmail,
       'name': authState.userName,
+      'profilePicturePath': authState.profilePicturePath,
     };
   }
   
@@ -71,54 +74,48 @@ class AuthService {
         return {'success': false, 'message': 'Por favor ingresa tu correo y contraseña'};
       }
       
-      // Ensure database is initialized
-      try {
-        await _dbHelper.database;
-      } catch (e) {
-        debugPrint('Database error: $e');
-        return {'success': false, 'message': 'Error al conectar con la base de datos. Por favor, inténtalo de nuevo.'};
-      }
-      
-      final user = await _dbHelper.getUserByEmail(email);
-      
-      if (user == null || user.isEmpty) {
-        return {'success': false, 'message': 'Usuario no encontrado'};
-      }
-      
+      // First validate the credentials
       final isValid = await _dbHelper.validateUser(email, password);
       
       if (isValid) {
-        final userId = user[DatabaseHelper.columnId]?.toString();
-        final userName = user[DatabaseHelper.columnName]?.toString() ?? 'Usuario';
+        // If credentials are valid, get the user data
+        final user = await _dbHelper.getUserByEmail(email);
         
-        if (userId == null) {
-          return {'success': false, 'message': 'Error en los datos del usuario'};
+        if (user != null) {
+          final userId = user[DatabaseHelper.columnId].toString();
+          final userName = user[DatabaseHelper.columnName];
+          final profilePicture = user[DatabaseHelper.columnProfilePicture];
+          
+          // Update auth state
+          await _ref.read(authProvider.notifier).login(
+            userId, 
+            email, 
+            userName,
+            profilePicture: profilePicture,
+          );
+          
+          return {
+            'success': true,
+            'user': {
+              'id': userId,
+              'name': userName,
+              'email': email,
+              'profilePicturePath': profilePicture,
+            }
+          };
         }
-        
-        await _ref.read(authProvider).login(
-          userId,
-          email,
-          userName,
-        );
-        
-        return {
-          'success': true,
-          'user': {
-            'id': userId,
-            'name': userName,
-            'email': email,
-          }
-        };
-      } else {
-        return {'success': false, 'message': 'Correo o contraseña incorrectos'};
       }
+      
+      // If we get here, either credentials were invalid or user data couldn't be found
+      return {'success': false, 'message': 'Correo o contraseña incorrectos'};
     } catch (e) {
+      debugPrint('Login error: $e');
       return {'success': false, 'message': 'Error al iniciar sesión: $e'};
     }
   }
   
   // Register new user
-  Future<Map<String, dynamic>> register(String name, String email, String password) async {
+  Future<Map<String, dynamic>> register(String name, String email, String password, {File? profileImage}) async {
     try {
       // Input validation
       if (name.isEmpty || email.isEmpty || password.isEmpty) {
@@ -139,15 +136,35 @@ class AuthService {
         return {'success': false, 'message': 'El correo ya está registrado'};
       }
       
+      // Save profile image to app directory if provided
+      String? profileImagePath;
+      if (profileImage != null) {
+        try {
+          // Get application documents directory
+          final directory = await getApplicationDocumentsDirectory();
+          final String fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final String path = '${directory.path}/$fileName';
+          
+          // Copy the file to app's documents directory
+          await profileImage.copy(path);
+          profileImagePath = path;
+          debugPrint('Profile image saved to: $path');
+        } catch (e) {
+          debugPrint('Error saving profile image: $e');
+          // Don't fail registration if image save fails
+        }
+      }
+      
       // Create new user
       final userId = await _dbHelper.insertUser({
         DatabaseHelper.columnName: name.trim(),
         DatabaseHelper.columnEmail: email.trim().toLowerCase(),
         DatabaseHelper.columnPassword: password,
+        if (profileImagePath != null) DatabaseHelper.columnProfilePicture: profileImagePath,
       });
       
       if (userId > 0) {
-        await _ref.read(authProvider).login(userId.toString(), email, name);
+        await _ref.read(authProvider.notifier).login(userId.toString(), email, name, profilePicture: profileImagePath);
         
         return {
           'success': true,
@@ -155,23 +172,25 @@ class AuthService {
             'id': userId,
             'name': name,
             'email': email,
+            'profilePicturePath': profileImagePath,
           }
         };
       } else {
-        return {'success': false, 'message': 'Error al registrar el usuario'};
+        return {'success': false, 'message': 'Error al crear la cuenta'};
       }
     } catch (e) {
-      return {'success': false, 'message': 'Error al registrar: $e'};
+      debugPrint('Registration error: $e');
+      return {'success': false, 'message': 'Error al registrar el usuario: $e'};
     }
   }
   
   // Logout user
   Future<void> logout() async {
-    await _ref.read(authProvider).logout();
+    await _ref.read(authProvider.notifier).logout();
   }
   
   // Update user profile
   Future<void> updateProfile({String? name, String? email}) async {
-    await _ref.read(authProvider).updateUserData(name: name, email: email);
+    await _ref.read(authProvider.notifier).updateUserData(name: name, email: email);
   }
 }

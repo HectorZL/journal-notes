@@ -24,6 +24,7 @@ class DatabaseHelper {
   static const String columnName = 'name';
   static const String columnEmail = 'email';
   static const String columnPassword = 'password';
+  static const String columnProfilePicture = 'profile_picture';
   static const String columnCreatedAt = 'created_at';
 
   // Notes Table Columns
@@ -36,7 +37,7 @@ class DatabaseHelper {
   static const String columnColor = 'color';
 
   // Database version - increment this when changing the database schema
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
   
   // Database name
   static const String _databaseName = 'mood_notes.db';
@@ -135,6 +136,19 @@ class DatabaseHelper {
       }
     }
     
+    if (oldVersion < 4) {
+      // Add profile picture column to users table
+      try {
+        await db.execute('ALTER TABLE $tableUsers ADD COLUMN $columnProfilePicture TEXT');
+        debugPrint('Successfully added profile_picture column to users table');
+      } catch (e) {
+        debugPrint('Error adding profile_picture column: $e');
+        if (!e.toString().contains('duplicate column name')) {
+          rethrow;
+        }
+      }
+    }
+    
     debugPrint('Database upgrade completed');
   }
 
@@ -148,7 +162,8 @@ class DatabaseHelper {
         $columnName TEXT NOT NULL,
         $columnEmail TEXT UNIQUE NOT NULL,
         $columnPassword TEXT NOT NULL,
-        $columnCreatedAt TEXT NOT NULL
+        $columnProfilePicture TEXT,
+        $columnCreatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
       )
     ''');
 
@@ -262,7 +277,7 @@ class DatabaseHelper {
     }
   }
 
-  Future<int> updateUser(int userId, {String? name, String? email}) async {
+  Future<int> updateUser(int userId, {String? name, String? email, String? profilePicture}) async {
     try {
       final db = await database;
       final data = <String, dynamic>{};
@@ -276,6 +291,7 @@ class DatabaseHelper {
         }
         data[columnEmail] = email;
       }
+      if (profilePicture != null) data[columnProfilePicture] = profilePicture;
       
       if (data.isEmpty) return 0; // No updates needed
       

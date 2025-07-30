@@ -268,12 +268,12 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Zambrano Hector  Developer y Tester',
+                      'Zambrano Hector Developer y Tester',
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Loor Elkin es el Diseñador UI/UX y Tester',
+                      'Loor Elkin UI/UX y Tester',
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
