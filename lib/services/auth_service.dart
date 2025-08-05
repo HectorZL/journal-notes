@@ -223,109 +223,83 @@ class AuthService {
     }
   }
   
-  Future<Map<String, dynamic>> loginWithFace(
-    String email,
-    String password,
-    File faceImage, {
-    int retryCount = 0,
-  }) async {
-    debugPrint('Starting face login for: $email');
-    
+  Future<Map<String, dynamic>> loginWithFace(File faceImage) async {
     try {
-      final apiStatus = await _checkApiStatus();
-      if (apiStatus != FaceRecognitionStatus.success) {
-        return _handleFaceRecognitionError(apiStatus);
-      }
-
-      final isValid = await _dbHelper.validateUser(email, password);
-      if (!isValid) {
-        debugPrint('Invalid credentials for user: $email');
+      // Check if the image is valid
+      if (!await faceImage.exists()) {
+        debugPrint('Face image does not exist at path: ${faceImage.path}');
         return {
           'success': false,
-          'message': 'Credenciales inválidas',
-          'status': FaceRecognitionStatus.notRecognized,
+          'message': 'La imagen no es válida o no se pudo cargar',
         };
       }
 
-      final user = await _dbHelper.getUserByEmail(email);
-      if (user == null) {
-        debugPrint('User not found in database: $email');
-        return {
-          'success': false,
-          'message': 'Usuario no encontrado',
-          'status': FaceRecognitionStatus.notRecognized,
-        };
-      }
+      debugPrint('Iniciando reconocimiento facial...');
+      
+      // Call face recognition service
+      try {
+        final faceService = FaceRecognitionService(baseUrl: _apiBaseUrl);
+        debugPrint('Llamando a la API de reconocimiento facial en: ${_apiBaseUrl}recognize');
+        
+        final recognitionResult = await faceService.recognizeFace(faceImage);
+        debugPrint('Resultado del reconocimiento: $recognitionResult');
 
-      final userId = user[DatabaseHelper.columnId].toString();
-      final userName = user[DatabaseHelper.columnName];
-      final profilePicture = user[DatabaseHelper.columnProfilePicture];
-
-      final imageStream = http.ByteStream(faceImage.openRead());
-      final length = await faceImage.length();
-      final multipartFile = http.MultipartFile(
-        'file',
-        imageStream,
-        length,
-        filename: 'face_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-
-      debugPrint('Sending face recognition request...');
-      final response = await _makeApiRequest(
-        '/recognize_face/',
-        files: [multipartFile],
-      );
-
-      if (response['is_known'] == true) {
-        if (response['name'] == userName) {
-          debugPrint('Face recognized successfully for user: $userName');
-          await _ref.read(authProvider.notifier).login(
-                userId,
-                email,
-                userName,
-                profilePicture: profilePicture,
+        if (recognitionResult['status'] == 'success' && 
+            recognitionResult['results'] != null && 
+            recognitionResult['results'].isNotEmpty) {
+          
+          final recognizedName = recognitionResult['results'][0]['name']?.toString() ?? '';
+          debugPrint('Nombre reconocido: $recognizedName');
+          
+          if (recognizedName.isNotEmpty) {
+            // Get user by name from the database
+            final user = await _dbHelper.getUserByName(recognizedName);
+            
+            if (user != null) {
+              // Log the user in
+              await _ref.read(authProvider.notifier).login(
+                user[DatabaseHelper.columnId].toString(),
+                user[DatabaseHelper.columnEmail],
+                user[DatabaseHelper.columnName],
+                profilePicture: user[DatabaseHelper.columnProfilePicture],
               );
 
-          return {
-            'success': true,
-            'user': {
-              'id': userId,
-              'name': userName,
-              'email': email,
-              'profilePicturePath': profilePicture,
-            },
-            'status': FaceRecognitionStatus.success,
-          };
-        } else {
-          debugPrint('Face does not match user: $userName');
-          return {
-            'success': false,
-            'message': 'El rostro no coincide con el usuario registrado',
-            'status': FaceRecognitionStatus.notRecognized,
-          };
+              return {
+                'success': true,
+                'message': 'Inicio de sesión exitoso',
+                'user': {
+                  'id': user[DatabaseHelper.columnId],
+                  'name': user[DatabaseHelper.columnName],
+                  'email': user[DatabaseHelper.columnEmail],
+                },
+              };
+            } else {
+              debugPrint('No se encontró usuario con el nombre: $recognizedName');
+              return {
+                'success': false,
+                'message': 'Usuario no encontrado',
+              };
+            }
+          }
         }
-      } else {
-        debugPrint('Face not recognized');
+        
         return {
           'success': false,
-          'message': 'Rostro no reconocido',
-          'status': FaceRecognitionStatus.notRecognized,
+          'message': 'No se pudo reconocer ningún rostro registrado',
+        };
+      } catch (e) {
+        debugPrint('Error en el reconocimiento facial: $e');
+        return {
+          'success': false,
+          'message': 'Error al procesar el reconocimiento facial: $e',
         };
       }
-    } on TimeoutException catch (e) {
-      if (retryCount < _maxRetryAttempts) {
-        debugPrint('Retrying... Attempt ${retryCount + 1}');
-        return loginWithFace(
-          email,
-          password,
-          faceImage,
-          retryCount: retryCount + 1,
-        );
-      }
-      return _handleFaceRecognitionError(FaceRecognitionStatus.timeout);
     } catch (e) {
-      debugPrint('Error in loginWithFace: $e');
-      return _handleFaceRecognitionError(FaceRecognitionStatus.unknownError);
+      debugPrint('Error en loginWithFace: $e');
+      return {
+        'success': false,
+        'message': 'Error en el inicio de sesión con reconocimiento facial: $e',
+      };
     }
   }
 

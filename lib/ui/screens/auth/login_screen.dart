@@ -90,8 +90,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _loginWithFace() async {
-    if (!_formKey.currentState!.validate()) return;
-    
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
@@ -104,24 +102,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _isLoading = true);
 
       final authService = ref.read(authServiceProvider);
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
       
-      if (email.isEmpty || password.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Por favor ingresa tu correo y contraseña primero'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
       final result = await authService.loginWithFace(
-        email,
-        password,
         File(image.path),
       );
 
@@ -146,18 +128,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Error en el reconocimiento facial'),
-            backgroundColor: Colors.red,
+            content: Text(result['message'] ?? 'Rostro no reconocido. Por favor, intente de nuevo.'),
+            backgroundColor: Colors.orange,
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Face login error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error al acceder a la cámara o al reconocimiento facial'),
+          SnackBar(
+            content: const Text('Error al procesar el reconocimiento facial. Intente de nuevo.'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }

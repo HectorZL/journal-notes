@@ -282,6 +282,26 @@ class DatabaseHelper {
     }
   }
 
+  Future<Map<String, dynamic>?> getUserByName(String name) async {
+    try {
+      if (name.isEmpty) {
+        throw ArgumentError('Name cannot be empty');
+      }
+      
+      final db = await database;
+      final result = await db.query(
+        tableUsers,
+        where: '$columnName = ?',
+        whereArgs: [name],
+      );
+      
+      return result.isNotEmpty ? result.first : null;
+    } catch (e) {
+      debugPrint('Error getting user by name: $e');
+      rethrow;
+    }
+  }
+
   Future<bool> validateUser(String email, String password) async {
     try {
       if (email.isEmpty || password.isEmpty) {
