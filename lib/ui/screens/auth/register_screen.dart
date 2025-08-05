@@ -27,7 +27,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _ngrokUrlController = TextEditingController();
   
   bool _isLoading = false;
-  String? _errorMessage;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _showAccessibilitySettings = false;
@@ -45,26 +44,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
   Future<void> _verifyFace() async {
     if (_ngrokUrlController.text.isEmpty) {
-      setState(() => _errorMessage = 'Por favor ingresa la URL del servidor');
+      _showErrorSnackBar('Por favor ingresa la URL del servidor');
       return;
     }
 
-    if (!FaceRecognitionService.isValidNgrokUrl(_ngrokUrlController.text)) {
-      setState(() => _errorMessage = 'URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)');
+    if (!Uri.tryParse(_ngrokUrlController.text)!.hasAbsolutePath ?? true) {
+      _showErrorSnackBar('URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)');
       return;
     }
 
     if (_profileImage == null) {
-      setState(() => _errorMessage = 'Por favor, toma una foto de perfil primero');
+      _showErrorSnackBar('Por favor, toma una foto de perfil primero');
       return;
     }
 
-    setState(() {
-      _isVerifyingFace = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isVerifyingFace = true;
+      });
+    }
 
     try {
       final faceService = FaceRecognitionService(baseUrl: _ngrokUrlController.text);
@@ -75,12 +85,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           _isVerifyingFace = false;
           if (result['isRegistered'] == true) {
             _isFaceVerified = false;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(result['message'] ?? 'Este rostro ya está registrado'),
-                backgroundColor: Colors.red,
-              ),
-            );
+            _showErrorSnackBar(result['message'] ?? 'Este rostro ya está registrado');
           } else if (result['success'] == true) {
             _isFaceVerified = true;
             ScaffoldMessenger.of(context).showSnackBar(
@@ -91,12 +96,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             );
           } else {
             _isFaceVerified = false;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(result['message'] ?? 'Error al verificar el rostro'),
-                backgroundColor: Colors.orange,
-              ),
-            );
+            _showErrorSnackBar(result['message'] ?? 'Error al verificar el rostro');
           }
         });
       }
@@ -105,13 +105,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         setState(() {
           _isVerifyingFace = false;
           _isFaceVerified = false;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al conectar con el servidor: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
         });
+        _showErrorSnackBar('Error al conectar con el servidor: $e');
       }
     }
   }
@@ -121,40 +116,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     
     // Verify server URL is provided and valid
     if (_ngrokUrlController.text.isEmpty) {
-      setState(() => _errorMessage = 'Por favor ingresa la URL del servidor');
+      _showErrorSnackBar('Por favor ingresa la URL del servidor');
       return;
     }
 
-    if (!FaceRecognitionService.isValidNgrokUrl(_ngrokUrlController.text)) {
-      setState(() => _errorMessage = 'URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)');
+    if (!Uri.tryParse(_ngrokUrlController.text)!.hasAbsolutePath ?? true) {
+      _showErrorSnackBar('URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)');
       return;
     }
     
     // Verify that a profile picture was taken
     if (_profileImage == null) {
-      setState(() => _errorMessage = 'Por favor, toma una foto de perfil');
+      _showErrorSnackBar('Por favor, toma una foto de perfil');
       return;
     }
-    
-    // Verify that the face has been verified
-    if (!_isFaceVerified) {
-      setState(() => _errorMessage = 'Por favor, verifica tu rostro antes de continuar');
-      return;
-    }
-    
+      
     // Hide keyboard
     FocusScope.of(context).unfocus();
     
     // Verify passwords match
     if (_passwordController.text != _confirmPasswordController.text) {
-      setState(() => _errorMessage = 'Las contraseñas no coinciden');
+      _showErrorSnackBar('Las contraseñas no coinciden');
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       final authService = ref.read(authServiceProvider);
@@ -173,25 +161,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         final notifier = ref.read(accessibilityProvider.notifier);
         await notifier.updateSettings(ref.read(accessibilityProvider));
         
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registro exitoso'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        
         // Navigate to home screen
         final navService = ref.read(navigationServiceProvider);
         navService.navigateToHome(context);
       } else {
-        setState(() {
-          _errorMessage = result['message'] ?? 'Error desconocido al registrarse';
-          _isLoading = false;
-        });
+        _showErrorSnackBar(result['message'] ?? 'Error desconocido al registrarse');
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Ocurrió un error al registrarse. Por favor, verifica tu conexión e inténtalo de nuevo.';
-        _isLoading = false;
-      });
+      _showErrorSnackBar('Ocurrió un error al registrarse. Por favor, verifica tu conexión e inténtalo de nuevo.');
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -202,7 +192,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         MaterialPageRoute(
           builder: (context) => CameraScreen(
             onImageCaptured: (File image) {
-              // Actualizamos la imagen de perfil
               if (mounted) {
                 setState(() {
                   _profileImage = image;
@@ -214,7 +203,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ),
       );
 
-      // Si hay una imagen devuelta, la asignamos
       if (image != null && mounted) {
         setState(() {
           _profileImage = image;
@@ -223,9 +211,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al capturar la imagen: $e')),
-        );
+        _showErrorSnackBar('Error al capturar la imagen: $e');
       }
     }
   }
@@ -241,8 +227,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       title: 'Crear cuenta',
       showBackButton: true,
       isLoading: _isLoading || _isVerifyingFace,
-      errorMessage: _errorMessage,
-      onRetry: _errorMessage != null ? _register : null,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(
@@ -434,7 +418,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Por favor ingresa la URL del servidor';
                   }
-                  if (!FaceRecognitionService.isValidNgrokUrl(value)) {
+                  if (!Uri.tryParse(value)!.hasAbsolutePath ?? true) {
                     return 'URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)';
                   }
                   return null;
