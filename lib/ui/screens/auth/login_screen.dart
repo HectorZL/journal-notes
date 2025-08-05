@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
+import '../../../services/url_service.dart';
 import '../../widgets/base_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -20,12 +21,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _ngrokUrlController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
   final ImagePicker _picker = ImagePicker();
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedUrl();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _ngrokUrlController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSavedUrl() async {
+    final savedUrl = await UrlService.getNgrokUrl();
+    if (savedUrl != null) {
+      setState(() {
+        _ngrokUrlController.text = savedUrl;
+      });
+    }
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Save the URL before proceeding
+    if (_ngrokUrlController.text.isNotEmpty) {
+      await UrlService.saveNgrokUrl(_ngrokUrlController.text);
+    }
 
     // Hide keyboard
     FocusScope.of(context).unfocus();
@@ -91,6 +121,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _loginWithFace() async {
     try {
+      // Validate the URL before proceeding
+      if (_ngrokUrlController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor ingresa la URL del servidor'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         preferredCameraDevice: CameraDevice.front,
@@ -101,7 +142,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       setState(() => _isLoading = true);
 
+      // Save the URL before proceeding
+      await UrlService.saveNgrokUrl(_ngrokUrlController.text);
+      
       final authService = ref.read(authServiceProvider);
+      
+      // Pass the URL to the auth service
+      authService.setApiBaseUrl(_ngrokUrlController.text);
       
       final result = await authService.loginWithFace(
         File(image.path),
@@ -140,9 +187,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Error al procesar el reconocimiento facial. Intente de nuevo.'),
+            content: Text('Error al procesar el reconocimiento facial: ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -151,13 +198,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 
   @override
@@ -225,6 +265,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               
               const SizedBox(height: 32),
+
+              // Server URL Field
+              TextFormField(
+                controller: _ngrokUrlController,
+                decoration: InputDecoration(
+                  labelText: 'URL del Servidor',
+                  hintText: 'https://ejemplo.ngrok.io',
+                  prefixIcon: const Icon(Icons.link),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                keyboardType: TextInputType.url,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa la URL del servidor';
+                  }
+                  if (!Uri.tryParse(value)!.hasAbsolutePath ?? true) {
+                    return 'Por favor ingresa una URL válida';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
 
               // Email field
               TextFormField(

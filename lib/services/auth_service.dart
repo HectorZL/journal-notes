@@ -236,10 +236,18 @@ class AuthService {
 
       debugPrint('Iniciando reconocimiento facial...');
       
+      // Ensure the base URL is properly formatted
+      String formattedUrl = _apiBaseUrl;
+      if (!formattedUrl.endsWith('/')) {
+        formattedUrl = '${formattedUrl}/';
+      }
+      
+      debugPrint('Using formatted API URL: $formattedUrl');
+      
       // Call face recognition service
       try {
-        final faceService = FaceRecognitionService(baseUrl: _apiBaseUrl);
-        debugPrint('Llamando a la API de reconocimiento facial en: ${_apiBaseUrl}recognize');
+        final faceService = FaceRecognitionService(baseUrl: formattedUrl);
+        debugPrint('Llamando a la API de reconocimiento facial en: ${formattedUrl}recognize');
         
         final recognitionResult = await faceService.recognizeFace(faceImage);
         debugPrint('Resultado del reconocimiento: $recognitionResult');
@@ -291,14 +299,16 @@ class AuthService {
         debugPrint('Error en el reconocimiento facial: $e');
         return {
           'success': false,
-          'message': 'Error al procesar el reconocimiento facial: $e',
+          'message': 'Error al procesar el reconocimiento facial. Por favor, verifica la URL del servidor e inténtalo de nuevo.',
+          'error': e.toString(),
         };
       }
     } catch (e) {
       debugPrint('Error en loginWithFace: $e');
       return {
         'success': false,
-        'message': 'Error en el inicio de sesión con reconocimiento facial: $e',
+        'message': 'Error al procesar la imagen. Por favor, inténtalo de nuevo.',
+        'error': e.toString(),
       };
     }
   }

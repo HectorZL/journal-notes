@@ -7,6 +7,7 @@ import 'package:notas_animo/providers/accessibility_provider.dart';
 import 'package:notas_animo/services/face_recognition_service.dart';
 import 'package:notas_animo/services/auth_service.dart';
 import 'package:notas_animo/services/navigation_service.dart';
+import 'package:notas_animo/services/url_service.dart';
 import 'package:notas_animo/ui/widgets/base_screen.dart';
 import 'package:notas_animo/ui/widgets/accessibility_settings_widget.dart';
 import 'package:notas_animo/ui/screens/camera/camera_screen.dart';
@@ -33,6 +34,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   File? _profileImage;
   bool _isVerifyingFace = false;
   bool _isFaceVerified = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedUrl();
+  }
+
+  Future<void> _loadSavedUrl() async {
+    final savedUrl = await UrlService.getNgrokUrl();
+    if (savedUrl != null) {
+      setState(() {
+        _ngrokUrlController.text = savedUrl;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -113,7 +129,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
+    // Save the URL before proceeding
+    if (_ngrokUrlController.text.isNotEmpty) {
+      await UrlService.saveNgrokUrl(_ngrokUrlController.text);
+    }
+
     // Verify server URL is provided and valid
     if (_ngrokUrlController.text.isEmpty) {
       _showErrorSnackBar('Por favor ingresa la URL del servidor');
