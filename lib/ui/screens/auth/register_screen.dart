@@ -4,11 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:notas_animo/providers/accessibility_provider.dart';
-import '../../../services/auth_service.dart';
-import '../../../services/navigation_service.dart';
-import '../../widgets/base_screen.dart';
-import '../../widgets/accessibility_settings_widget.dart';
-import '../camera/camera_screen.dart';
+import 'package:notas_animo/services/face_recognition_service.dart';
+import 'package:notas_animo/services/auth_service.dart';
+import 'package:notas_animo/services/navigation_service.dart';
+import 'package:notas_animo/ui/widgets/base_screen.dart';
+import 'package:notas_animo/ui/widgets/accessibility_settings_widget.dart';
+import 'package:notas_animo/ui/screens/camera/camera_screen.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -23,6 +24,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _ngrokUrlController = TextEditingController();
   
   bool _isLoading = false;
   String? _errorMessage;
@@ -30,6 +32,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscureConfirmPassword = true;
   bool _showAccessibilitySettings = false;
   File? _profileImage;
+  bool _isVerifyingFace = false;
+  bool _isFaceVerified = false;
 
   @override
   void dispose() {
@@ -37,22 +41,93 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _ngrokUrlController.dispose();
     super.dispose();
+  }
+
+  Future<void> _verifyFace() async {
+    if (_ngrokUrlController.text.isEmpty) {
+      setState(() => _errorMessage = 'Por favor ingresa la URL del servidor');
+      return;
+    }
+
+    if (!FaceRecognitionService.isValidNgrokUrl(_ngrokUrlController.text)) {
+      setState(() => _errorMessage = 'URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)');
+      return;
+    }
+
+    if (_profileImage == null) {
+      setState(() => _errorMessage = 'Por favor, toma una foto de perfil primero');
+      return;
+    }
+
+    setState(() {
+      _isVerifyingFace = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final faceService = FaceRecognitionService(baseUrl: _ngrokUrlController.text);
+      final result = await faceService.verifyFace(_profileImage!);
+      
+      if (mounted) {
+        setState(() {
+          _isVerifyingFace = false;
+          if (result['isRegistered'] == true) {
+            _errorMessage = result['message'];
+            _isFaceVerified = false;
+          } else if (result['success'] == true) {
+            _isFaceVerified = true;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Rostro verificado correctamente')),
+            );
+          } else {
+            _errorMessage = result['message'] ?? 'Error al verificar el rostro';
+            _isFaceVerified = false;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isVerifyingFace = false;
+          _errorMessage = 'Error al conectar con el servidor: $e';
+          _isFaceVerified = false;
+        });
+      }
+    }
   }
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     
-    // Check if profile image is captured
+    // Verify server URL is provided and valid
+    if (_ngrokUrlController.text.isEmpty) {
+      setState(() => _errorMessage = 'Por favor ingresa la URL del servidor');
+      return;
+    }
+
+    if (!FaceRecognitionService.isValidNgrokUrl(_ngrokUrlController.text)) {
+      setState(() => _errorMessage = 'URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)');
+      return;
+    }
+    
+    // Verify that a profile picture was taken
     if (_profileImage == null) {
       setState(() => _errorMessage = 'Por favor, toma una foto de perfil');
+      return;
+    }
+    
+    // Verify that the face has been verified
+    if (!_isFaceVerified) {
+      setState(() => _errorMessage = 'Por favor, verifica tu rostro antes de continuar');
       return;
     }
     
     // Hide keyboard
     FocusScope.of(context).unfocus();
     
-    // Check if passwords match
+    // Verify passwords match
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() => _errorMessage = 'Las contraseñas no coinciden');
       return;
@@ -65,11 +140,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
+      
+      // Register the user with face verification
       final result = await authService.register(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
         profileImage: _profileImage,
+        apiBaseUrl: _ngrokUrlController.text,
       );
 
       if (result['success'] == true && mounted) {
@@ -77,7 +155,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         final notifier = ref.read(accessibilityProvider.notifier);
         await notifier.updateSettings(ref.read(accessibilityProvider));
         
-        // Navigate to home screen using the navigation service
+        // Navigate to home screen
         final navService = ref.read(navigationServiceProvider);
         navService.navigateToHome(context);
       } else {
@@ -92,9 +170,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _isLoading = false;
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -108,6 +188,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               if (mounted) {
                 setState(() {
                   _profileImage = image;
+                  _isFaceVerified = false; // Reset face verification when a new image is taken
                 });
               }
             },
@@ -119,6 +200,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (image != null && mounted) {
         setState(() {
           _profileImage = image;
+          _isFaceVerified = false; // Reset face verification when a new image is taken
         });
       }
     } catch (e) {
@@ -140,7 +222,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return BaseScreen(
       title: 'Crear cuenta',
       showBackButton: true,
-      isLoading: _isLoading,
+      isLoading: _isLoading || _isVerifyingFace,
       errorMessage: _errorMessage,
       onRetry: _errorMessage != null ? _register : null,
       child: SingleChildScrollView(
@@ -194,6 +276,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           : 'Foto lista',
                       style: theme.textTheme.bodySmall,
                     ),
+                    if (_profileImage != null) ...[
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: _isVerifyingFace ? null : _verifyFace,
+                        icon: _isVerifyingFace 
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : _isFaceVerified 
+                                ? const Icon(Icons.verified, size: 18)
+                                : const Icon(Icons.face_retouching_natural, size: 18),
+                        label: Text(_isVerifyingFace 
+                            ? 'Verificando...' 
+                            : _isFaceVerified 
+                                ? 'Rostro verificado'
+                                : 'Verificar rostro'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _isFaceVerified 
+                              ? Colors.green
+                              : theme.colorScheme.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -206,7 +314,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   labelText: 'Nombre completo',
                   prefixIcon: Icon(Icons.person_outline),
                 ),
-                textCapitalization: TextCapitalization.words,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Por favor ingresa tu nombre';
@@ -228,8 +335,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Por favor ingresa tu correo electrónico';
                   }
-                  if (!EmailValidator.validate(value.trim())) {
-                    return 'Ingresa un correo electrónico válido';
+                  if (!EmailValidator.validate(value)) {
+                    return 'Por favor ingresa un correo electrónico válido';
                   }
                   return null;
                 },
@@ -274,9 +381,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureConfirmPassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
+                      _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                     ),
                     onPressed: () {
                       setState(() {
@@ -296,49 +401,64 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
               
+              // Server URL Field
+              TextFormField(
+                controller: _ngrokUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'URL del servidor',
+                  hintText: 'https://tudominio.com',
+                  prefixIcon: Icon(Icons.link),
+                ),
+                keyboardType: TextInputType.url,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Por favor ingresa la URL del servidor';
+                  }
+                  if (!FaceRecognitionService.isValidNgrokUrl(value)) {
+                    return 'URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Ingresa la URL de tu servidor (ej: https://tudominio.com)',
+                style: theme.textTheme.bodySmall,
+              ),
               const SizedBox(height: 24),
               
               // Register Button
               ElevatedButton(
                 onPressed: _isLoading ? null : _register,
-                child: const Text('Registrarse'),
+                child: const Text('Crear cuenta'),
               ),
-              
               const SizedBox(height: 16),
               
-              // Login Link
+              // Already have an account? Login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('¿Ya tienes una cuenta?'),
+                  Text('¿Ya tienes una cuenta?', style: theme.textTheme.bodyMedium),
                   TextButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () => navService.navigateToLogin(context),
+                    onPressed: _isLoading ? null : () => navService.navigateToLogin(context),
                     child: const Text('Inicia sesión'),
                   ),
                 ],
               ),
               
-              // Accessibility Settings Toggle
+              // Toggle Accessibility Settings
               TextButton(
                 onPressed: () {
                   setState(() {
                     _showAccessibilitySettings = !_showAccessibilitySettings;
                   });
                 },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.accessibility_new),
-                    const SizedBox(width: 8),
-                    Text(
-                      _showAccessibilitySettings
-                          ? 'Ocultar configuración de accesibilidad'
-                          : 'Mostrar configuración de accesibilidad',
-                    ),
-                  ],
+                child: Text(
+                  _showAccessibilitySettings 
+                      ? 'Ocultar configuración de accesibilidad' 
+                      : 'Mostrar configuración de accesibilidad',
                 ),
               ),
               

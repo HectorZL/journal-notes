@@ -1,42 +1,61 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:notas_animo/services/face_recognition_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../config/network_config.dart';
 import '../data/database_helper.dart';
 import '../providers/auth_provider.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
-import 'dart:math'; // Import math library for sqrt function
+import '../utils/error_handler.dart';
 
-final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(ref);
-});
+enum FaceRecognitionStatus {
+  success,
+  noFaceDetected,
+  notRecognized,
+  apiError,
+  networkError,
+  timeout,
+  unknownError
+}
+
+const int _maxRetryAttempts = 3;
+const Duration _retryDelay = Duration(seconds: 2);
+const Duration _apiTimeout = Duration(seconds: 30);
 
 class AuthService {
   final Ref _ref;
+  final String baseUrl;
+  String _apiBaseUrl;  
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   
-  AuthService(this._ref);
+  AuthService(this._ref, {this.baseUrl = 'http://localhost:8080'}) : _apiBaseUrl = baseUrl;
+
+  void setApiBaseUrl(String url) {
+    _apiBaseUrl = url;
+    debugPrint('API base URL set to: $url');
+  }
   
-  // Check if user is logged in
   bool isLoggedIn() {
     return _ref.read(authProvider).isAuthenticated;
   }
   
-  // Get current user ID
   String? getCurrentUserId() {
     return _ref.read(authProvider).userId;
   }
   
-  // Get current user email
   String? getCurrentUserEmail() {
     return _ref.read(authProvider).userEmail;
   }
   
-  // Get current user name
   String? getCurrentUserName() {
     return _ref.read(authProvider).userName;
   }
   
-  // Get current user data as a map
   Map<String, dynamic>? get currentUser {
     final authState = _ref.read(authProvider);
     if (!authState.isAuthenticated) return null;
@@ -48,53 +67,225 @@ class AuthService {
       'profilePicturePath': authState.profilePicturePath,
     };
   }
-  
-  // Check if email exists in the system
-  Future<bool> doesEmailExist(String email) async {
+
+  Future<Map<String, dynamic>> _makeApiRequest(
+    String endpoint, {
+    Map<String, String>? fields,
+    List<http.MultipartFile>? files,
+    String method = 'POST',
+    int retryCount = 0,
+  }) async {
     try {
-      // Query the database to check if email exists
-      final db = await _dbHelper.database;
-      final result = await db.query(
-        'users',
-        where: 'email = ?',
-        whereArgs: [email.toLowerCase()], // Case insensitive check
+      final uri = Uri.parse('$_apiBaseUrl$endpoint');
+      var request = http.MultipartRequest(method, uri);
+
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+
+      if (files != null) {
+        request.files.addAll(files);
+      }
+
+      debugPrint('Sending $method request to $uri (attempt ${retryCount + 1}/$_maxRetryAttempts)');
+      final response = await request.send().timeout(_apiTimeout);
+      final responseData = await http.Response.fromStream(response);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return jsonDecode(responseData.body);
+      } else if (response.statusCode >= 500 && retryCount < _maxRetryAttempts) {
+        debugPrint('Server error (${response.statusCode}), retrying...');
+        await Future.delayed(_retryDelay * (retryCount + 1));
+        return _makeApiRequest(
+          endpoint,
+          fields: fields,
+          files: files,
+          method: method,
+          retryCount: retryCount + 1,
+        );
+      } else {
+        final error = jsonDecode(responseData.body);
+        throw Exception(error['detail'] ?? 'API request failed with status ${response.statusCode}');
+      }
+    } on TimeoutException {
+      if (retryCount < _maxRetryAttempts) {
+        debugPrint('Request timed out, retrying...');
+        await Future.delayed(_retryDelay * (retryCount + 1));
+        return _makeApiRequest(
+          endpoint,
+          fields: fields,
+          files: files,
+          method: method,
+          retryCount: retryCount + 1,
+        );
+      }
+      throw Exception('Request timed out after $_maxRetryAttempts attempts');
+    } catch (e) {
+      debugPrint('API request error: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> doesEmailExist(String email) async {
+    if (_apiBaseUrl.isEmpty) {
+      debugPrint('API base URL not set');
+      return false;
+    }
+    
+    try {
+      final response = await NetworkConfig.makeRequest(
+        '$_apiBaseUrl/check-email?email=${Uri.encodeComponent(email)}',
+        method: 'GET',
       );
       
-      return result.isNotEmpty;
+      if (response.statusCode == 200) {
+        final data = response.body;
+        return data.toLowerCase() == 'true';
+      } else {
+        debugPrint('Error checking email: ${response.statusCode} - ${response.body}');
+        return false;
+      }
     } catch (e) {
       debugPrint('Error checking if email exists: $e');
-      return false; // In case of error, default to false to prevent account enumeration
+      return false;
     }
   }
   
-  // Login user
+  Future<FaceRecognitionStatus> _checkApiStatus() async {
+    try {
+      debugPrint('Checking API status...');
+      final response = await http
+          .get(Uri.parse('$_apiBaseUrl/status/'))
+          .timeout(const Duration(seconds: 5));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final status = data['status'] == 'running'
+            ? FaceRecognitionStatus.success
+            : FaceRecognitionStatus.apiError;
+        debugPrint('API status: $status');
+        return status;
+      }
+      debugPrint('API status check failed: ${response.statusCode}');
+      return FaceRecognitionStatus.apiError;
+    } on TimeoutException {
+      debugPrint('API status check timed out');
+      return FaceRecognitionStatus.timeout;
+    } catch (e) {
+      debugPrint('API status check error: $e');
+      return FaceRecognitionStatus.apiError;
+    }
+  }
+  
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      // Input validation
-      if (email.isEmpty || password.isEmpty) {
-        return {'success': false, 'message': 'Por favor ingresa tu correo y contraseña'};
+      debugPrint('Starting login for: $email');
+      
+      final isValid = await _dbHelper.validateUser(email, password);
+      if (!isValid) {
+        debugPrint('Invalid credentials for user: $email');
+        return {'success': false, 'message': 'Correo o contraseña incorrectos'};
       }
       
-      // First validate the credentials
-      final isValid = await _dbHelper.validateUser(email, password);
+      final user = await _dbHelper.getUserByEmail(email);
+      if (user == null) {
+        debugPrint('User not found in database: $email');
+        return {'success': false, 'message': 'Usuario no encontrado'};
+      }
       
-      if (isValid) {
-        // If credentials are valid, get the user data
-        final user = await _dbHelper.getUserByEmail(email);
-        
-        if (user != null) {
-          final userId = user[DatabaseHelper.columnId].toString();
-          final userName = user[DatabaseHelper.columnName];
-          final profilePicture = user[DatabaseHelper.columnProfilePicture];
-          
-          // Update auth state
+      final userId = user[DatabaseHelper.columnId].toString();
+      final userName = user[DatabaseHelper.columnName];
+      final profilePicture = user[DatabaseHelper.columnProfilePicture];
+      
+      debugPrint('Login successful for user: $userName');
+      await _ref.read(authProvider.notifier).login(
+        userId, 
+        email, 
+        userName,
+        profilePicture: profilePicture,
+      );
+      
+      return {
+        'success': true,
+        'user': {
+          'id': userId,
+          'name': userName,
+          'email': email,
+          'profilePicturePath': profilePicture,
+        }
+      };
+    } catch (e) {
+      debugPrint('Login error: $e');
+      return {
+        'success': false, 
+        'message': 'Error al iniciar sesión. Por favor, inténtalo de nuevo.'
+      };
+    }
+  }
+  
+  Future<Map<String, dynamic>> loginWithFace(
+    String email,
+    String password,
+    File faceImage, {
+    int retryCount = 0,
+  }) async {
+    debugPrint('Starting face login for: $email');
+    
+    try {
+      final apiStatus = await _checkApiStatus();
+      if (apiStatus != FaceRecognitionStatus.success) {
+        return _handleFaceRecognitionError(apiStatus);
+      }
+
+      final isValid = await _dbHelper.validateUser(email, password);
+      if (!isValid) {
+        debugPrint('Invalid credentials for user: $email');
+        return {
+          'success': false,
+          'message': 'Credenciales inválidas',
+          'status': FaceRecognitionStatus.notRecognized,
+        };
+      }
+
+      final user = await _dbHelper.getUserByEmail(email);
+      if (user == null) {
+        debugPrint('User not found in database: $email');
+        return {
+          'success': false,
+          'message': 'Usuario no encontrado',
+          'status': FaceRecognitionStatus.notRecognized,
+        };
+      }
+
+      final userId = user[DatabaseHelper.columnId].toString();
+      final userName = user[DatabaseHelper.columnName];
+      final profilePicture = user[DatabaseHelper.columnProfilePicture];
+
+      final imageStream = http.ByteStream(faceImage.openRead());
+      final length = await faceImage.length();
+      final multipartFile = http.MultipartFile(
+        'file',
+        imageStream,
+        length,
+        filename: 'face_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      debugPrint('Sending face recognition request...');
+      final response = await _makeApiRequest(
+        '/recognize_face/',
+        files: [multipartFile],
+      );
+
+      if (response['is_known'] == true) {
+        if (response['name'] == userName) {
+          debugPrint('Face recognized successfully for user: $userName');
           await _ref.read(authProvider.notifier).login(
-            userId, 
-            email, 
-            userName,
-            profilePicture: profilePicture,
-          );
-          
+                userId,
+                email,
+                userName,
+                profilePicture: profilePicture,
+              );
+
           return {
             'success': true,
             'user': {
@@ -102,259 +293,235 @@ class AuthService {
               'name': userName,
               'email': email,
               'profilePicturePath': profilePicture,
-            }
+            },
+            'status': FaceRecognitionStatus.success,
+          };
+        } else {
+          debugPrint('Face does not match user: $userName');
+          return {
+            'success': false,
+            'message': 'El rostro no coincide con el usuario registrado',
+            'status': FaceRecognitionStatus.notRecognized,
           };
         }
-      }
-      
-      // If we get here, either credentials were invalid or user data couldn't be found
-      return {'success': false, 'message': 'Correo o contraseña incorrectos'};
-    } catch (e) {
-      debugPrint('Login error: $e');
-      return {'success': false, 'message': 'Error al iniciar sesión: $e'};
-    }
-  }
-  
-  // Register new user
-  Future<Map<String, dynamic>> register(String name, String email, String password, {File? profileImage}) async {
-    try {
-      // Input validation
-      if (name.isEmpty || email.isEmpty || password.isEmpty) {
-        return {'success': false, 'message': 'Por favor completa todos los campos'};
-      }
-      
-      // Ensure database is initialized
-      try {
-        await _dbHelper.database;
-      } catch (e) {
-        debugPrint('Database error: $e');
-        return {'success': false, 'message': 'Error al conectar con la base de datos. Por favor, inténtalo de nuevo.'};
-      }
-      
-      // Check if user already exists
-      final existingUser = await _dbHelper.getUserByEmail(email);
-      if (existingUser != null && existingUser.isNotEmpty) {
-        return {'success': false, 'message': 'El correo ya está registrado'};
-      }
-      
-      // Save profile image to app directory if provided
-      String? profileImagePath;
-      if (profileImage != null) {
-        try {
-          // Get application documents directory
-          final directory = await getApplicationDocumentsDirectory();
-          final String fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
-          final String path = '${directory.path}/$fileName';
-          
-          // Copy the file to app's documents directory
-          await profileImage.copy(path);
-          profileImagePath = path;
-          debugPrint('Profile image saved to: $path');
-        } catch (e) {
-          debugPrint('Error saving profile image: $e');
-          // Don't fail registration if image save fails
-        }
-      }
-      
-      // Create new user
-      final userId = await _dbHelper.insertUser({
-        DatabaseHelper.columnName: name.trim(),
-        DatabaseHelper.columnEmail: email.trim().toLowerCase(),
-        DatabaseHelper.columnPassword: password,
-        if (profileImagePath != null) DatabaseHelper.columnProfilePicture: profileImagePath,
-      });
-      
-      if (userId > 0) {
-        await _ref.read(authProvider.notifier).login(userId.toString(), email, name, profilePicture: profileImagePath);
-        
-        return {
-          'success': true,
-          'user': {
-            'id': userId,
-            'name': name,
-            'email': email,
-            'profilePicturePath': profileImagePath,
-          }
-        };
       } else {
-        return {'success': false, 'message': 'Error al crear la cuenta'};
-      }
-    } catch (e) {
-      debugPrint('Registration error: $e');
-      return {'success': false, 'message': 'Error al registrar el usuario: $e'};
-    }
-  }
-  
-  // Register new user with face authentication
-  Future<Map<String, dynamic>> registerWithFace({
-    required String name,
-    required String email,
-    required String password,
-    required File faceImage,
-  }) async {
-    try {
-      // 1. First, register the user normally
-      final registerResult = await register(name, email, password, profileImage: faceImage);
-      
-      if (!registerResult['success']) {
-        return registerResult;
-      }
-      
-      // 2. Process face data and save it
-      final userId = registerResult['user']['id'].toString();
-      final faceDescriptor = await _processFaceData(faceImage);
-      
-      if (faceDescriptor == null) {
+        debugPrint('Face not recognized');
         return {
           'success': false,
-          'message': 'No se pudo procesar el rostro. Por favor, intente con otra imagen.'
+          'message': 'Rostro no reconocido',
+          'status': FaceRecognitionStatus.notRecognized,
         };
       }
-      
-      // 3. Save face descriptor
-      await _saveFaceDescriptor(userId, email, faceDescriptor);
-      
-      return registerResult;
+    } on TimeoutException catch (e) {
+      if (retryCount < _maxRetryAttempts) {
+        debugPrint('Retrying... Attempt ${retryCount + 1}');
+        return loginWithFace(
+          email,
+          password,
+          faceImage,
+          retryCount: retryCount + 1,
+        );
+      }
+      return _handleFaceRecognitionError(FaceRecognitionStatus.timeout);
     } catch (e) {
-      debugPrint('Error in registerWithFace: $e');
-      return {'success': false, 'message': 'Error al registrar con reconocimiento facial: $e'};
+      debugPrint('Error in loginWithFace: $e');
+      return _handleFaceRecognitionError(FaceRecognitionStatus.unknownError);
     }
-  }
-  
-  // Process face data using ML Kit
-  Future<Uint8List?> _processFaceData(File imageFile) async {
-    try {
-      // TODO: Implementar procesamiento de rostro con ML Kit
-      // Por ahora, devolvemos los bytes de la imagen como placeholder
-      return await imageFile.readAsBytes();
-    } catch (e) {
-      debugPrint('Error processing face data: $e');
-      return null;
-    }
-  }
-  
-  // Save face descriptor to local storage
-  Future<void> _saveFaceDescriptor(String userId, String email, Uint8List descriptor) async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/face_${DateTime.now().millisecondsSinceEpoch}.dat');
-      await file.writeAsBytes(descriptor);
-      
-      // Save reference in database using the dedicated method
-      await _dbHelper.insertFaceAuthData(
-        userId: userId,
-        email: email,
-        descriptorPath: file.path,
-      );
-    } catch (e) {
-      debugPrint('Error saving face descriptor: $e');
-      rethrow;
-    }
-  }
-  
-  // Logout user
-  Future<void> logout() async {
-    await _ref.read(authProvider.notifier).logout();
-  }
-  
-  // Update user profile
-  Future<void> updateProfile({String? name, String? email}) async {
-    await _ref.read(authProvider.notifier).updateUserData(name: name, email: email);
-  }
-  
-  // Calculate Euclidean distance between two face descriptors
-  // Lower distance means more similar faces
-  double _calculateFaceDistance(Uint8List descriptor1, Uint8List descriptor2) {
-    if (descriptor1.length != descriptor2.length) {
-      return double.infinity; // Different descriptor sizes are not comparable
-    }
-    
-    double sum = 0.0;
-    for (int i = 0; i < descriptor1.length; i++) {
-      final diff = descriptor1[i] - descriptor2[i];
-      sum += diff * diff;
-    }
-    return sqrt(sum);
   }
 
-  // Authenticate with face
-  Future<Map<String, dynamic>> loginWithFace(File faceImage) async {
+  Future<Map<String, dynamic>> registerFace(
+    String userId,
+    String userName,
+    File faceImage, {
+    int retryCount = 0,
+  }) async {
     try {
-      // 1. Process the input face
-      final inputDescriptor = await _processFaceData(faceImage);
-      if (inputDescriptor == null) {
-        return {'success': false, 'message': 'No se pudo procesar el rostro.'};
+      debugPrint('Starting face registration for user: $userName');
+
+      final apiStatus = await _checkApiStatus();
+      if (apiStatus != FaceRecognitionStatus.success) {
+        return _handleFaceRecognitionError(apiStatus);
       }
-      
-      // 2. Get all stored face descriptors
-      final db = await _dbHelper.database;
-      final storedFaces = await db.query('face_auth');
-      
-      double minDistance = double.infinity;
-      Map<String, dynamic>? bestMatch;
-      
-      // 3. Compare with stored faces
-      for (var storedFace in storedFaces) {
-        try {
-          final file = File(storedFace['descriptor_path'] as String);
-          if (await file.exists()) {
-            final storedDescriptor = await file.readAsBytes();
-            
-            // Compare face descriptors
-            final distance = _calculateFaceDistance(inputDescriptor, storedDescriptor);
-            debugPrint('Face comparison distance: $distance');
-            
-            // Update best match if this one is better
-            if (distance < minDistance) {
-              minDistance = distance;
-              bestMatch = storedFace;
-            }
-          }
-        } catch (e) {
-          debugPrint('Error processing stored face: $e');
-          continue; // Skip to next face if there's an error
-        }
-      }
-      
-      // 4. Check if we found a good enough match
-      // Typical threshold values are between 0.6-1.0, adjust based on testing
-      const threshold = 0.8; 
-      if (bestMatch != null && minDistance <= threshold) {
-        // Get user data
-        final user = await _dbHelper.getUserByEmail(bestMatch['email'].toString());
-        if (user != null) {
-          // Update auth state
-          await _ref.read(authProvider.notifier).login(
-            user[DatabaseHelper.columnId].toString(),
-            user[DatabaseHelper.columnEmail],
-            user[DatabaseHelper.columnName],
-            profilePicture: user[DatabaseHelper.columnProfilePicture],
-          );
-          
-          return {
-            'success': true,
-            'user': {
-              'id': user[DatabaseHelper.columnId],
-              'name': user[DatabaseHelper.columnName],
-              'email': user[DatabaseHelper.columnEmail],
-              'profilePicturePath': user[DatabaseHelper.columnProfilePicture],
-            },
-            'confidence': 1.0 - (minDistance / threshold).clamp(0.0, 1.0), // Convert to confidence score (0-1)
-          };
-        }
-      }
-      
+
+      final imageStream = http.ByteStream(faceImage.openRead());
+      final length = await faceImage.length();
+      final multipartFile = http.MultipartFile(
+        'file',
+        imageStream,
+        length,
+        filename: 'register_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      debugPrint('Sending face registration request...');
+      final response = await _makeApiRequest(
+        '/register_face_from_local_path/',
+        fields: {'nombre': userName},
+        files: [multipartFile],
+      );
+
+      debugPrint('Face registration successful for user: $userName');
       return {
-        'success': false, 
-        'message': 'No se encontró una coincidencia para el rostro.',
-        'confidence': bestMatch != null ? 1.0 - (minDistance / threshold).clamp(0.0, 1.0) : 0.0,
+        'success': true,
+        'message': 'Rostro registrado exitosamente',
+        'data': response,
       };
-    } catch (e, stackTrace) {
-      debugPrint('Error in loginWithFace: $e\n$stackTrace');
+    } on TimeoutException catch (e) {
+      if (retryCount < _maxRetryAttempts) {
+        debugPrint('Registration timeout, retrying...');
+        await Future.delayed(_retryDelay * (retryCount + 1));
+        return registerFace(
+          userId,
+          userName,
+          faceImage,
+          retryCount: retryCount + 1,
+        );
+      }
+      return _handleFaceRecognitionError(FaceRecognitionStatus.timeout);
+    } catch (e) {
+      debugPrint('Error in registerFace: $e');
+      return _handleFaceRecognitionError(FaceRecognitionStatus.unknownError);
+    }
+  }
+
+  Map<String, dynamic> _handleFaceRecognitionError(
+    FaceRecognitionStatus status, {
+    String? customMessage,
+  }) {
+    String message = customMessage ?? '';
+    
+    if (message.isEmpty) {
+      switch (status) {
+        case FaceRecognitionStatus.noFaceDetected:
+          message = 'No se detectó ningún rostro en la imagen';
+          break;
+        case FaceRecognitionStatus.notRecognized:
+          message = 'Rostro no reconocido';
+          break;
+        case FaceRecognitionStatus.apiError:
+          message = 'Error en el servidor de reconocimiento facial';
+          break;
+        case FaceRecognitionStatus.networkError:
+          message = 'Error de conexión. Verifica tu conexión a internet';
+          break;
+        case FaceRecognitionStatus.timeout:
+          message = 'Tiempo de espera agotado. Intenta de nuevo';
+          break;
+        case FaceRecognitionStatus.unknownError:
+        default:
+          message = 'Error desconocido. Por favor, intenta de nuevo';
+      }
+    }
+
+    debugPrint('Face recognition error: $message');
+    return {
+      'success': false,
+      'message': message,
+      'status': status,
+    };
+  }
+
+  Future<Map<String, dynamic>> register(
+    String name,
+    String email,
+    String password, {
+    File? profileImage,
+    required String apiBaseUrl,
+  }) async {
+    try {
+      debugPrint('Starting registration for: $email');
+      
+      // Check if email already exists
+      final existingUser = await _dbHelper.getUserByEmail(email);
+      if (existingUser != null) {
+        return {'success': false, 'message': 'Este correo ya está registrado'};
+      }
+
+      // Create user data map
+      final userData = {
+        DatabaseHelper.columnName: name,
+        DatabaseHelper.columnEmail: email,
+        DatabaseHelper.columnPassword: password, // Note: DatabaseHelper will hash the password
+        if (profileImage != null)
+          DatabaseHelper.columnProfilePicture: profileImage.path,
+      };
+
+      // Insert user into database
+      final userId = await _dbHelper.insertUser(userData);
+      
+      if (userId == null) {
+        return {'success': false, 'message': 'Error al crear el usuario'};
+      }
+
+      // Log the user in after successful registration
+      await _ref.read(authProvider.notifier).login(
+        userId.toString(),
+        email,
+        name,
+        profilePicture: profileImage?.path,
+      );
+
+      // Set API base URL if provided
+      if (apiBaseUrl.isNotEmpty) {
+        setApiBaseUrl(apiBaseUrl);
+      }
+
+      debugPrint('Registration successful for user: $email');
       return {
-        'success': false, 
-        'message': 'Error en la autenticación facial: ${e.toString()}',
+        'success': true,
+        'message': 'Registro exitoso',
+        'user': {
+          'id': userId,
+          'name': name,
+          'email': email,
+          'profilePicturePath': profileImage?.path,
+        }
+      };
+    } catch (e) {
+      debugPrint('Error during registration: $e');
+      return {
+        'success': false,
+        'message': 'Error durante el registro: ${e.toString()}',
       };
     }
   }
+
+  Future<bool> updateProfile({
+    required String userId,
+    required String name,
+    required String email,
+    String? profilePicturePath,
+  }) async {
+    try {
+      // Update in local database
+      final rowsAffected = await _dbHelper.updateUser(
+        int.tryParse(userId) ?? 0,
+        name: name,
+        email: email,
+        profilePicture: profilePicturePath,
+      );
+
+      if (rowsAffected > 0) {
+        // Update the auth state
+        await _ref.read(authProvider.notifier).updateUserData(
+              name: name,
+              email: email,
+              profilePicture: profilePicturePath,
+            );
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error updating profile: $e');
+      return false;
+    }
+  }
+
+  Future<void> logout() async {
+    debugPrint('Logging out user: ${getCurrentUserEmail()}');
+    await _ref.read(authProvider.notifier).logout();
+  }
 }
+
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService(ref);
+});

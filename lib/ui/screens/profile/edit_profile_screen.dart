@@ -78,6 +78,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
         // Update the current user in the auth service
         await authService.updateProfile(
+          userId: userId.toString(),
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
         );

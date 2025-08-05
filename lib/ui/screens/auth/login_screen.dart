@@ -48,8 +48,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('¡Sesión iniciada con éxito!'),
+          SnackBar(
+            content: Text(result['message'] ?? 'Inicio de sesión exitoso'),
             backgroundColor: Colors.green,
           ),
         );
@@ -61,23 +61,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final navService = ref.read(navigationServiceProvider);
         navService.navigateToHome(context);
       } else {
-        // Only show snackbar, no state update for error message
-        if (mounted) {
-          final errorMessage = result['message'] ?? 'Error desconocido al iniciar sesión';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Error en el inicio de sesión'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e, stackTrace) {
       debugPrint('Login error: $e');
       debugPrint('Stack trace: $stackTrace');
       
-      // Only show snackbar, no state update for error message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -95,6 +90,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _loginWithFace() async {
+    if (!_formKey.currentState!.validate()) return;
+    
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
@@ -107,20 +104,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _isLoading = true);
 
       final authService = ref.read(authServiceProvider);
-      final result = await authService.loginWithFace(File(image.path));
-
-      if (mounted) {
-        if (result['success'] == true) {
-          final navService = ref.read(navigationServiceProvider);
-          navService.navigateToHome(context);
-        } else {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      
+      if (email.isEmpty || password.isEmpty) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Error en el reconocimiento facial'),
-              backgroundColor: Colors.red,
+            const SnackBar(
+              content: Text('Por favor ingresa tu correo y contraseña primero'),
+              backgroundColor: Colors.orange,
             ),
           );
         }
+        return;
+      }
+
+      final result = await authService.loginWithFace(
+        email,
+        password,
+        File(image.path),
+      );
+
+      if (result['success'] == true) {
+        if (!mounted) return;
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Inicio de sesión con reconocimiento facial exitoso'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate to home after a short delay
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (!mounted) return;
+        final navService = ref.read(navigationServiceProvider);
+        navService.navigateToHome(context);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Error en el reconocimiento facial'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       debugPrint('Face login error: $e');

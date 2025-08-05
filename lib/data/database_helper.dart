@@ -262,6 +262,26 @@ class DatabaseHelper {
     }
   }
 
+  Future<Map<String, dynamic>?> getUserById(String userId) async {
+    try {
+      if (userId.isEmpty) {
+        throw ArgumentError('User ID cannot be empty');
+      }
+      
+      final db = await database;
+      final result = await db.query(
+        tableUsers,
+        where: '$columnId = ?',
+        whereArgs: [int.tryParse(userId) ?? 0],
+      );
+      
+      return result.isNotEmpty ? result.first : null;
+    } catch (e) {
+      debugPrint('Error getting user by ID: $e');
+      rethrow;
+    }
+  }
+
   Future<bool> validateUser(String email, String password) async {
     try {
       if (email.isEmpty || password.isEmpty) {
@@ -303,7 +323,12 @@ class DatabaseHelper {
     }
   }
 
-  Future<int> updateUser(int userId, {String? name, String? email, String? profilePicture}) async {
+  Future<int> updateUser(int userId, {
+    String? name,
+    String? email,
+    String? password,
+    String? profilePicture, String? profileImage,
+  }) async {
     try {
       final db = await database;
       final data = <String, dynamic>{};
@@ -317,6 +342,10 @@ class DatabaseHelper {
         }
         data[columnEmail] = email;
       }
+      if (password != null) {
+        final salt = _generateSalt();
+        data[columnPassword] = _hashPasswordWithSalt(password, salt);
+      }
       if (profilePicture != null) data[columnProfilePicture] = profilePicture;
       
       if (data.isEmpty) return 0; // No updates needed
@@ -329,6 +358,26 @@ class DatabaseHelper {
       );
     } catch (e) {
       debugPrint('Error updating user: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> deleteUser(int userId) async {
+    try {
+      if (userId <= 0) {
+        throw ArgumentError('Invalid user ID');
+      }
+      
+      final db = await database;
+      final count = await db.delete(
+        tableUsers,
+        where: '$columnId = ?',
+        whereArgs: [userId],
+      );
+      
+      return count > 0;
+    } catch (e) {
+      debugPrint('Error deleting user: $e');
       rethrow;
     }
   }
