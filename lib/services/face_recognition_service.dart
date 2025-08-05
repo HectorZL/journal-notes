@@ -33,22 +33,9 @@ class FaceRecognitionService {
   /// Registra un nuevo rostro en el sistema
   Future<Map<String, dynamic>> registerFace(File imageFile, String name) async {
     try {
-      // Primero verificar si el rostro ya está registrado
-      final recognitionResult = await recognizeFace(imageFile);
-      
-      if (recognitionResult['status'] == 'success' && 
-          recognitionResult['results']?.isNotEmpty == true) {
-        return {
-          'success': false,
-          'message': 'Este rostro ya está registrado en el sistema',
-          'data': recognitionResult,
-        };
-      }
-
-      // Si no está registrado, proceder con el registro
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/register'),
+        Uri.parse(baseUrl + 'register'),
       );
 
       // Add the image file
@@ -70,26 +57,28 @@ class FaceRecognitionService {
       final jsonResponse = json.decode(responseData);
       
       if (response.statusCode == 200) {
-        if (jsonResponse['success'] == true) {
+        // Check if the response contains a success message
+        if (responseData.toLowerCase().contains('face registered successfully') ||
+            (jsonResponse is Map && jsonResponse['success'] == true)) {
           return {
             'success': true,
-            'message': 'Rostro registrado correctamente en la base de datos',
+            'message': 'Rostro registrado correctamente',
             'data': jsonResponse,
           };
         } else {
           return {
             'success': false,
-            'message': 'Error al guardar en la base de datos: ${jsonResponse['message'] ?? 'Error desconocido'}',
+            'message': 'Error al registrar el rostro',
             'data': jsonResponse,
           };
         }
       } else {
-        throw Exception('Failed to register face: ${response.statusCode} - $responseData');
+        throw Exception('Error del servidor: ${response.statusCode} - $responseData');
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'Error al registrar el rostro: $e',
+        'message': 'Error al conectar con el servidor: $e',
         'data': null,
       };
     }

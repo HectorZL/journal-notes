@@ -148,13 +148,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final authService = ref.read(authServiceProvider);
       
       // Register the user with face verification
+      debugPrint('Iniciando registro con imagen facial...');
       final result = await authService.register(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
         profileImage: _profileImage,
         apiBaseUrl: _ngrokUrlController.text,
+        faceImage: _profileImage, // Pass the profile image as face image
       );
+
+      debugPrint('Resultado del registro: ${result.toString()}');
 
       if (result['success'] == true && mounted) {
         // Save accessibility settings
@@ -178,6 +182,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _showErrorSnackBar(result['message'] ?? 'Error desconocido al registrarse');
       }
     } catch (e) {
+      debugPrint('Error durante el registro: $e');
       _showErrorSnackBar('Ocurrió un error al registrarse. Por favor, verifica tu conexión e inténtalo de nuevo.');
     } finally {
       if (mounted) {

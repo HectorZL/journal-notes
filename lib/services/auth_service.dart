@@ -426,6 +426,7 @@ class AuthService {
     String password, {
     File? profileImage,
     required String apiBaseUrl,
+    File? faceImage,
   }) async {
     try {
       debugPrint('Starting registration for: $email');
@@ -436,11 +437,25 @@ class AuthService {
         return {'success': false, 'message': 'Este correo ya está registrado'};
       }
 
+      // Register face if image is provided
+      if (faceImage != null) {
+        setApiBaseUrl(apiBaseUrl);
+        final faceService = FaceRecognitionService(baseUrl: apiBaseUrl);
+        final faceResult = await faceService.registerFace(faceImage, name);
+        
+        if (!faceResult['success']) {
+          return {
+            'success': false,
+            'message': faceResult['message'] ?? 'Error al registrar el rostro',
+          };
+        }
+      }
+
       // Create user data map
       final userData = {
         DatabaseHelper.columnName: name,
         DatabaseHelper.columnEmail: email,
-        DatabaseHelper.columnPassword: password, // Note: DatabaseHelper will hash the password
+        DatabaseHelper.columnPassword: password,
         if (profileImage != null)
           DatabaseHelper.columnProfilePicture: profileImage.path,
       };
@@ -459,11 +474,6 @@ class AuthService {
         name,
         profilePicture: profileImage?.path,
       );
-
-      // Set API base URL if provided
-      if (apiBaseUrl.isNotEmpty) {
-        setApiBaseUrl(apiBaseUrl);
-      }
 
       debugPrint('Registration successful for user: $email');
       return {
