@@ -1,8 +1,9 @@
 import 'dart:math';
-
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'data/database_helper.dart';
 import 'services/navigation_service.dart';
 import 'providers/accessibility_provider.dart';
@@ -59,15 +60,30 @@ Widget errorWidgetBuilder(FlutterErrorDetails errorDetails) {
 // Create a provider override reference
 final authProviderOverride = Provider<AuthProvider>((ref) => throw UnimplementedError());
 
-Future<void> main() async {
+void main() async {
+  // Enable network debugging
+  HttpOverrides.global = MyHttpOverrides();
+  
   // Set up error handling
   WidgetsFlutterBinding.ensureInitialized();
 
   // Set up error handlers
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
-    debugPrint(details.toString());
+    debugPrint('Flutter Error: ${details.exception}');
+    debugPrint('Stack trace: ${details.stack}');
   };
+
+  // Test network connectivity
+  try {
+    final response = await http.get(
+      Uri.parse('https://www.google.com'),
+      headers: {'User-Agent': 'Flutter App'},
+    );
+    debugPrint('Internet connection test: ${response.statusCode == 200 ? 'SUCCESS' : 'FAILED'}');
+  } catch (e) {
+    debugPrint('Internet connection test FAILED: $e');
+  }
 
   // Set up error widget builder
   ErrorWidget.builder = errorWidgetBuilder;
@@ -109,6 +125,14 @@ Future<void> main() async {
         ),
       ),
     );
+  }
+}
+
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
   }
 }
 
