@@ -74,16 +74,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         setState(() {
           _isVerifyingFace = false;
           if (result['isRegistered'] == true) {
-            _errorMessage = result['message'];
             _isFaceVerified = false;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Este rostro ya está registrado'),
+                backgroundColor: Colors.red,
+              ),
+            );
           } else if (result['success'] == true) {
             _isFaceVerified = true;
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Rostro verificado correctamente')),
+              SnackBar(
+                content: Text('Rostro verificado correctamente. Puedes continuar con el registro.'),
+                backgroundColor: Colors.green,
+              ),
             );
           } else {
-            _errorMessage = result['message'] ?? 'Error al verificar el rostro';
             _isFaceVerified = false;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message'] ?? 'Error al verificar el rostro'),
+                backgroundColor: Colors.orange,
+              ),
+            );
           }
         });
       }
@@ -91,8 +104,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) {
         setState(() {
           _isVerifyingFace = false;
-          _errorMessage = 'Error al conectar con el servidor: $e';
           _isFaceVerified = false;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al conectar con el servidor: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
         });
       }
     }

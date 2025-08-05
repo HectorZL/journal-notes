@@ -77,7 +77,7 @@ class FaceRecognitionService {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/recognize'),
+        Uri.parse(baseUrl + 'recognize'),
       );
 
       // Add the image file
