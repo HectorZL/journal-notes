@@ -21,7 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _ngrokUrlController = TextEditingController();
+  //final _ngrokUrlController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
   final ImagePicker _picker = ImagePicker();
@@ -29,33 +29,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSavedUrl();
+   // _loadSavedUrl();
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _ngrokUrlController.dispose();
+    //_ngrokUrlController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadSavedUrl() async {
+ /* Future<void> _loadSavedUrl() async {
     final savedUrl = await UrlService.getNgrokUrl();
     if (savedUrl != null) {
       setState(() {
         _ngrokUrlController.text = savedUrl;
       });
     }
-  }
+  }*/
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     // Save the URL before proceeding
-    if (_ngrokUrlController.text.isNotEmpty) {
+    /*if (_ngrokUrlController.text.isNotEmpty) {
       await UrlService.saveNgrokUrl(_ngrokUrlController.text);
-    }
+    }*/
 
     // Hide keyboard
     FocusScope.of(context).unfocus();
@@ -122,7 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _loginWithFace() async {
     try {
       // Validate the URL before proceeding
-      if (_ngrokUrlController.text.isEmpty) {
+     /* if (_ngrokUrlController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Por favor ingresa la URL del servidor'),
@@ -130,7 +130,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         );
         return;
-      }
+      }*/
 
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
@@ -143,12 +143,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _isLoading = true);
 
       // Save the URL before proceeding
-      await UrlService.saveNgrokUrl(_ngrokUrlController.text);
+      //await UrlService.saveNgrokUrl(_ngrokUrlController.text);
       
       final authService = ref.read(authServiceProvider);
       
       // Pass the URL to the auth service
-      authService.setApiBaseUrl(_ngrokUrlController.text);
+      //authService.setApiBaseUrl(_ngrokUrlController.text);
       
       final result = await authService.loginWithFace(
         File(image.path),
@@ -267,7 +267,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(height: 32),
 
               // Server URL Field
-              TextFormField(
+             /* TextFormField(
                 controller: _ngrokUrlController,
                 decoration: InputDecoration(
                   labelText: 'URL del Servidor',
@@ -287,7 +287,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   }
                   return null;
                 },
-              ),
+              ),*/
               const SizedBox(height: 16),
 
               // Email field

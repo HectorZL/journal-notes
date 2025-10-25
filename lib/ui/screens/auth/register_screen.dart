@@ -25,7 +25,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _ngrokUrlController = TextEditingController();
+  //final _ngrokUrlController = TextEditingController();
   
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -35,7 +35,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _isVerifyingFace = false;
   bool _isFaceVerified = false;
 
-  @override
+  /*@override
   void initState() {
     super.initState();
     _loadSavedUrl();
@@ -48,7 +48,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _ngrokUrlController.text = savedUrl;
       });
     }
-  }
+  }*/
 
   @override
   void dispose() {
@@ -56,7 +56,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _ngrokUrlController.dispose();
+    //_ngrokUrlController.dispose();
     super.dispose();
   }
 
@@ -71,16 +71,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _verifyFace() async {
-    if (_ngrokUrlController.text.isEmpty) {
+    /*if (_ngrokUrlController.text.isEmpty) {
       _showErrorSnackBar('Por favor ingresa la URL del servidor');
       return;
     }
 
-    if (!Uri.tryParse(_ngrokUrlController.text)!.hasAbsolutePath ?? true) {
+    if (Uri.tryParse(_ngrokUrlController.text)!.hasAbsolutePath ?? true) {
       _showErrorSnackBar('URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)');
       return;
     }
-
+    */
     if (_profileImage == null) {
       _showErrorSnackBar('Por favor, toma una foto de perfil primero');
       return;
@@ -93,7 +93,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
 
     try {
-      final faceService = FaceRecognitionService(baseUrl: _ngrokUrlController.text);
+      String grokurl = 'http://localhost:8080';
+      final faceService = FaceRecognitionService(baseUrl: grokurl);
       final result = await faceService.verifyFace(_profileImage!);
       
       if (mounted) {
@@ -131,7 +132,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     // Save the URL before proceeding
-    if (_ngrokUrlController.text.isNotEmpty) {
+    /*if (_ngrokUrlController.text.isNotEmpty) {
       await UrlService.saveNgrokUrl(_ngrokUrlController.text);
     }
 
@@ -141,16 +142,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
-    if (!Uri.tryParse(_ngrokUrlController.text)!.hasAbsolutePath ?? true) {
+    if (Uri.tryParse(_ngrokUrlController.text)!.hasAbsolutePath ?? true) {
       _showErrorSnackBar('URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)');
       return;
-    }
+    }*/
     
     // Verify that a profile picture was taken
-    if (_profileImage == null) {
+    /*if (_profileImage == null) {
       _showErrorSnackBar('Por favor, toma una foto de perfil');
       return;
-    }
+    }*/
       
     // Hide keyboard
     FocusScope.of(context).unfocus();
@@ -175,7 +176,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _emailController.text.trim(),
         _passwordController.text,
         profileImage: _profileImage,
-        apiBaseUrl: _ngrokUrlController.text,
+        // apiBaseUrl: _ngrokUrlController.text,
         faceImage: _profileImage, // Pass the profile image as face image
       );
 
@@ -268,7 +269,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       children: [
                         CircleAvatar(
                           radius: 50,
-                          backgroundColor: colorScheme.surfaceVariant,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
                           backgroundImage: _profileImage != null
                               ? FileImage(_profileImage!)
                               : null,
@@ -432,7 +433,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               const SizedBox(height: 16),
               
               // Server URL Field
-              TextFormField(
+             /* TextFormField(
                 controller: _ngrokUrlController,
                 decoration: const InputDecoration(
                   labelText: 'URL del servidor',
@@ -444,7 +445,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Por favor ingresa la URL del servidor';
                   }
-                  if (!Uri.tryParse(value)!.hasAbsolutePath ?? true) {
+                  if (Uri.tryParse(value)!.hasAbsolutePath ?? true) {
                     return 'URL inválida. Asegúrate de que sea una URL válida (debe comenzar con http:// o https://)';
                   }
                   return null;
@@ -455,7 +456,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 'Ingresa la URL de tu servidor (ej: https://tudominio.com)',
                 style: theme.textTheme.bodySmall,
               ),
-              const SizedBox(height: 24),
+              */const SizedBox(height: 24),
               
               // Register Button
               ElevatedButton(

@@ -6,12 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:notas_animo/services/face_recognition_service.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/network_config.dart';
 import '../data/database_helper.dart';
 import '../providers/auth_provider.dart';
-import '../utils/error_handler.dart';
 
 enum FaceRecognitionStatus {
   success,
@@ -349,7 +346,7 @@ class AuthService {
         'message': 'Rostro registrado exitosamente',
         'data': response,
       };
-    } on TimeoutException catch (e) {
+    } on TimeoutException {
       if (retryCount < _maxRetryAttempts) {
         debugPrint('Registration timeout, retrying...');
         await Future.delayed(_retryDelay * (retryCount + 1));
@@ -409,7 +406,7 @@ class AuthService {
     String email,
     String password, {
     File? profileImage,
-    required String apiBaseUrl,
+    String? apiBaseUrl,
     File? faceImage,
   }) async {
     try {
@@ -423,8 +420,9 @@ class AuthService {
 
       // Register face if image is provided
       if (faceImage != null) {
-        setApiBaseUrl(apiBaseUrl);
-        final faceService = FaceRecognitionService(baseUrl: apiBaseUrl);
+
+        setApiBaseUrl(apiBaseUrl ?? 'localhost:8080');
+        final faceService = FaceRecognitionService(baseUrl: apiBaseUrl ?? 'localhost:8080');
         final faceResult = await faceService.registerFace(faceImage, name);
         
         if (!faceResult['success']) {
@@ -446,10 +444,6 @@ class AuthService {
 
       // Insert user into database
       final userId = await _dbHelper.insertUser(userData);
-      
-      if (userId == null) {
-        return {'success': false, 'message': 'Error al crear el usuario'};
-      }
 
       // Log the user in after successful registration
       await _ref.read(authProvider.notifier).login(

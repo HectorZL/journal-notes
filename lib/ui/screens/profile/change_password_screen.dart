@@ -238,7 +238,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+                  fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -289,7 +289,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+                  fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -343,7 +343,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+                  fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -396,7 +396,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
                 ),

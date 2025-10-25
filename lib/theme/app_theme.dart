@@ -41,7 +41,7 @@ class AppTheme {
             fontWeight: FontWeight.bold,
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: isDark ? Colors.grey[900] : Colors.white,
           elevation: 1,
           shape: RoundedRectangleBorder(
@@ -81,7 +81,7 @@ class AppTheme {
           fontWeight: FontWeight.bold,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: colorScheme.surface,
         elevation: 1,
         shape: RoundedRectangleBorder(
